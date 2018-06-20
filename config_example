@@ -1,0 +1,5 @@
+max 10
+prefix_1core gcp-wn-1core
+preemptible 1
+zones asia-northeast1-b
+image gcp-wn-1core

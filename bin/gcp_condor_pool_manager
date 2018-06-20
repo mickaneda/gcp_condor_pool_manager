@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+if ! type gcloud >& /dev/null;then
+  echo "Intall gcloud: https://cloud.google.com/sdk/install"
+  exit 1
+fi
+
+# Config file
+CONFIG_FILE=~/.config/gcp_condor_pool_manager/config
+
+# Default parameters
+max=0
+prefix_1core=""
+image=""
+preemptible=0
+zones=""
+
+# Read config function
+read_config () {
+  if [ ! -f "$CONFIG_FILE" ];then
+    return
+  fi
+  while read name var;do
+    if [ "$name" = "max" ] && [ "$var" != "" ] && expr $var + 1 >/dev/nul 2>&1;then
+      max=$var
+    elif [ "$name" = "prefix_1core" ] && [ "$var" != "" ];then
+      prefix_1core=$var
+    elif [ "$name" = "image" ] && [ "$var" != "" ];then
+       image=$var
+    elif [ "$name" = "preemptible" ];then
+       preemptible=$var
+    elif [ "$name" = "zones" ];then
+       zones=$(echo $var|tr , ' ')
+    fi
+  done < "$CONFIG_FILE"
+}
+
+read_config
+
+# Check parameters
+if [ "$max" -eq 0 ];then
+  echo "set non-zero max"
+  exit 1
+fi
+
+if [ -z "$prefix_1core" ];then
+  echo "set prefix_1core"
+  exit 2
+fi
+
+# Main loop
+while :;do
+  read_config
+  # 0: "Total", 1: Machines, 2: Owner, 3: Claimed, 4: Unclaimed, 5: Matched, 6: Preempting, 7: Drain
+  total=($(condor_status -total |grep Total))
+  if [ -z "${total[0]}" ] || ( [ ${total[1]} -lt $max ] && [ ${total[4]} -eq 0 ] );then
+    option=""
+    if [ -n "$image" ];then
+      option="${option} --image $image"
+    fi
+    if [ "$preemptible" -eq 1 ];then
+      option="${option} --preemptible"
+    fi
+    if [ -n "$zones" ];then
+      filter="--filter=\"zone:($zones)\""
+      option="${option} --zone=$(echo $zones|cut -d' ' -f1)"
+    fi
+    instances=$(eval gcloud compute instances list $filter|grep "^$prefix_1core"|cut -d' ' -f1)
+    n=1
+    while [ $n -lt 10000 ];do
+      name=${prefix_1core}-$(printf "%04d" $n)
+      if ! echo $instances|grep -q $name;then
+        echo "$ gcloud compute instances create $name $option"
+        gcloud compute instances create $name $option
+        break
+      fi
+      ((n++))
+    done
+  fi
+  sleep 10
+done
