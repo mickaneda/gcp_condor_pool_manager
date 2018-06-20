@@ -14,6 +14,7 @@ prefix_1core=""
 image=""
 preemptible=0
 zones=""
+reuse=0
 
 # Read config function
 read_config () {
@@ -31,6 +32,8 @@ read_config () {
        preemptible=$var
     elif [ "$name" = "zones" ];then
        zones=$(echo $var|tr , ' ')
+    elif [ "$name" = "reuse" ];then
+       reuse=$var
     fi
   done < "$CONFIG_FILE"
 }
@@ -51,31 +54,73 @@ fi
 # Main loop
 while :;do
   read_config
+
+  # Set option
+  option=""
+  filter=""
+  zone=""
+  if [ -n "$image" ];then
+    option="${option} --image $image"
+  fi
+  if [ "$preemptible" -eq 1 ];then
+    option="${option} --preemptible"
+  fi
+  if [ -n "$zones" ];then
+    filter="--filter=\"zone:($zones)\""
+    option="${option} --zone=$(echo $zones|cut -d' ' -f1)"
+    zone="--zone=$(echo $zones|cut -d' ' -f1)"
+  fi
+
+  # Check instances
+  all=()
+  terminated=()
+  while read line;do
+    instance=($line)
+    state=${instance[((${#instance[@]}-1))]}
+    if [ "$state" == "TERMINATED" ];then
+      echo $reuse
+      if [ $reuse -eq 1 ];then
+        all=(${all[@]} ${instance[0]})
+        terminated=(${terminated[@]} ${instance[0]})
+      else
+        echo "$ gcloud compute instances delete ${instance[0]} $zone"
+        gcloud compute instances delete ${instance[0]} $zone
+      fi
+    else
+      all=(${all[@]} ${instance[0]})
+    fi
+  done < <(eval gcloud compute instances list $filter|grep "^$prefix_1core")
+
+  # Check condor status
   # 0: "Total", 1: Machines, 2: Owner, 3: Claimed, 4: Unclaimed, 5: Matched, 6: Preempting, 7: Drain
   total=($(condor_status -total |grep Total))
   if [ -z "${total[0]}" ] || ( [ ${total[1]} -lt $max ] && [ ${total[4]} -eq 0 ] );then
-    option=""
-    if [ -n "$image" ];then
-      option="${option} --image $image"
-    fi
-    if [ "$preemptible" -eq 1 ];then
-      option="${option} --preemptible"
-    fi
-    if [ -n "$zones" ];then
-      filter="--filter=\"zone:($zones)\""
-      option="${option} --zone=$(echo $zones|cut -d' ' -f1)"
-    fi
-    instances=$(eval gcloud compute instances list $filter|grep "^$prefix_1core"|cut -d' ' -f1)
     n=1
-    while [ $n -lt 10000 ];do
-      name=${prefix_1core}-$(printf "%04d" $n)
-      if ! echo $instances|grep -q $name;then
-        echo "$ gcloud compute instances create $name $option"
-        gcloud compute instances create $name $option
-        break
-      fi
-      ((n++))
-    done
+    if [ ${#terminated[@]} -gt 0 ];then
+      echo "$ gcloud compute start ${terminated[0]} $option"
+      gcloud compute start ${terminated[0]} $option
+    else
+      while [ $n -lt 10000 ];do
+        name=${prefix_1core}-$(printf "%04d" $n)
+        if ! echo ${all[*]}|grep -q $name;then
+          echo "$ gcloud compute instances create $name $option"
+          gcloud compute instances create $name $option
+          try=0
+          while [ -z "$(condor_status |grep $name)" ];do
+            ((try++))
+            if [ $try -gt 100 ];then
+              echo "condor in $name is still not running:"
+              echo "Please check $name status"
+              break
+            fi
+            sleep 1
+          done
+          break
+        fi
+        ((n++))
+      done
+    fi
   fi
+
   sleep 10
 done
