@@ -177,7 +177,6 @@ while :;do
   # Check instances
   all=()
   terminated=()
-  running=()
   while read line;do
     instance=($line)
     name=${instance[0]}
