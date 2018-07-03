@@ -15,27 +15,48 @@ image=""
 preemptible=0
 zones=""
 reuse=0
+params=(max prefix_1core image preemptible zones reuse)
+
+# Show setup
+show_setup () {
+  echo  "=========================="
+  echo "$(date): parameters updated"
+  for p in ${params[@]};do
+    eval "echo \$p = \$$p"
+  done
+  echo  "=========================="
+}
 
 # Read config function
 read_config () {
   if [ ! -f "$CONFIG_FILE" ];then
     return
   fi
+  is_updated=0
   while read name var;do
-    if [ "$name" = "max" ] && [ "$var" != "" ] && expr $var + 1 >/dev/nul 2>&1;then
+    if [ "$name" = "max" ] && [ "$max" != "$var" ] && [ "$var" != "" ] && expr $var + 1 >/dev/nul 2>&1;then
+      is_updated=1
       max=$var
-    elif [ "$name" = "prefix_1core" ] && [ "$var" != "" ];then
+    elif [ "$name" = "prefix_1core" ] && [ "$prefix_1core" != "$var" ] && [ "$var" != "" ];then
+      is_updated=1
       prefix_1core=$var
-    elif [ "$name" = "image" ] && [ "$var" != "" ];then
+    elif [ "$name" = "image" ] && [ "$image" != "$var" ] && [ "$var" != "" ];then
+      is_updated=1
        image=$var
-    elif [ "$name" = "preemptible" ];then
+    elif [ "$name" = "preemptible" ] && [ "$preemptible" != "$var" ];then
+      is_updated=1
        preemptible=$var
-    elif [ "$name" = "zones" ];then
+    elif [ "$name" = "zones" ] && [ "${zones[*]}" != "$(echo $var|tr , ' ')" ];then
+      is_updated=1
        zones=$(echo $var|tr , ' ')
-    elif [ "$name" = "reuse" ];then
+    elif [ "$name" = "reuse" ] && [ "$reuse" != "$var" ];then
+      is_updated=1
        reuse=$var
     fi
   done < "$CONFIG_FILE"
+  if [ $is_updated -eq 1 ];then
+    show_setup
+  fi
 }
 
 read_config
