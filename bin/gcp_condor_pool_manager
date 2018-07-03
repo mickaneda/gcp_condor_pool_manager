@@ -7,6 +7,7 @@ fi
 
 # Config file
 CONFIG_FILE=~/.config/gcp_condor_pool_manager/config
+WN_LIST=~/.config/gcp_condor_pool_manager/wn_list
 
 # Default parameters
 max=0
@@ -15,68 +16,80 @@ image=""
 preemptible=0
 zones=""
 reuse=0
-params=(max prefix_1core image preemptible zones reuse)
+interval=10
+params=(max prefix_1core image preemptible zones reus interval)
 
-# Show setup
+# Functions: Show setup
 show_setup () {
-  echo  "=========================="
+  echo ""
+  echo "=========================="
   echo "$(date): parameters updated"
   for p in ${params[@]};do
     eval "echo \$p = \$$p"
   done
-  echo  "=========================="
+  echo "=========================="
+  echo ""
 }
 
-# Read config function
-read_config () {
-  if [ ! -f "$CONFIG_FILE" ];then
-    return
+# Functions: Read config function
+check_var () {
+  local name="$1"
+  local var="$2"
+  local is_num="${3:-0}"
+  local no_empty="${4:-0}"
+  if [ "$var" = "$(eval "echo \$$name")" ];then
+    return 0
   fi
-  is_updated=0
-  while read name var;do
-    if [ "$name" = "max" ] && [ "$max" != "$var" ] && [ "$var" != "" ] && expr $var + 1 >/dev/nul 2>&1;then
-      is_updated=1
-      max=$var
-    elif [ "$name" = "prefix_1core" ] && [ "$prefix_1core" != "$var" ] && [ "$var" != "" ];then
-      is_updated=1
-      prefix_1core=$var
-    elif [ "$name" = "image" ] && [ "$image" != "$var" ] && [ "$var" != "" ];then
-      is_updated=1
-       image=$var
-    elif [ "$name" = "preemptible" ] && [ "$preemptible" != "$var" ];then
-      is_updated=1
-       preemptible=$var
-    elif [ "$name" = "zones" ] && [ "${zones[*]}" != "$(echo $var|tr , ' ')" ];then
-      is_updated=1
-       zones=$(echo $var|tr , ' ')
-    elif [ "$name" = "reuse" ] && [ "$reuse" != "$var" ];then
-      is_updated=1
-       reuse=$var
+
+  if [ $is_num -eq 1 ];then
+    if ! expr $var + 1 >/dev/null 2>&1;then
+      echo "WARNING: $var must be number, $var is not allowed. Check your configuration file."
+      return 1
     fi
-  done < "$CONFIG_FILE"
-  if [ $is_updated -eq 1 ];then
-    show_setup
   fi
+
+  if [ $no_empty -eq 1 ];then
+    if [ -z "$var" ];then
+      echo "WARNING: $var must not be empty. Check your configuration file."
+      return 2
+    fi
+  fi
+
+  eval "$name=$var"
+  is_updated=1
+
+  return 0
 }
 
-read_config
+read_config () {
+  if [ -f "$CONFIG_FILE" ];then
+    is_updated=0
+    local name
+    local var
+    while read name var;do
+      if [ "$name" = "max" ];then
+        check_var max "$var" 1 1
+      elif [ "$name" = "prefix_1core" ];then
+        check_var prefix_1core "$var" 0 1
+      elif [ "$name" = "image" ];then
+        check_var image "$var" 0 1
+      elif [ "$name" = "preemptible" ];then
+        check_var preemptible "$var" 1 1
+      elif [ "$name" = "zones" ];then
+        check_var zones "$var" 0 0
+        zones=$(echo $var|tr , ' ')
+      elif [ "$name" = "reuse" ];then
+        check_var reuse "$var" 1 1
+      elif [ "$name" = "interval" ];then
+        check_var reuse "$var" 1 1
+      fi
+    done < "$CONFIG_FILE"
+    if [ $is_updated -eq 1 ];then
+      show_setup
+    fi
+  fi
 
-# Check parameters
-if [ "$max" -eq 0 ];then
-  echo "set non-zero max"
-  exit 1
-fi
-
-if [ -z "$prefix_1core" ];then
-  echo "set prefix_1core"
-  exit 2
-fi
-
-# Main loop
-while :;do
-  read_config
-
-  # Set option
+  # Set gcloud options
   option=""
   filter=""
   zone=""
@@ -87,61 +100,148 @@ while :;do
     option="${option} --preemptible"
   fi
   if [ -n "$zones" ];then
-    filter="--filter=\"zone:($zones)\""
-    option="${option} --zone=$(echo $zones|cut -d' ' -f1)"
-    zone="--zone=$(echo $zones|cut -d' ' -f1)"
+    filter="--filter=\"zone:($(echo $zones|tr , ' '))\""
+    zone="--zone=$(echo $zones|tr , ' '|cut -d' ' -f1)"
+    option="${option} ${zone}"
   fi
+}
+
+read_config
+
+# Check parameters
+
+if [ "$max" -eq 0 ];then
+  echo "ERROR: set non-zero max"
+  exit 1
+fi
+
+if [ -z "$prefix_1core" ];then
+  echo "ERROR: set prefix_1core"
+  exit 2
+fi
+
+# Functions: Update worker node information
+update_wns () {
+  # update condor configuration for worker nodes
+  names=()
+  ips=()
+
+  # Get running instances
+  while read line;do
+    instance=($line)
+    name=${instance[0]}
+    state=${instance[((${#instance[@]}-1))]}
+    external_ip=${instance[((${#instance[@]}-2))]}
+    if [ "$state" == "RUNNING" ];then
+      names=(${names[@]} ${name})
+      ips=(${ips[@]} ${external_ip})
+    fi
+  done < <(eval gcloud compute instances list $filter|grep "^$prefix_1core")
+
+  # Check instance which is not running, but in condor_status (should be in the list until it is removed from the status)
+  in_status=($(condor_status -format "%s\n" Name|grep "slot1@${prefix_1core}"|cut -d"@" -f2|cut -d"." -f1))
+  touch "$WN_LIST"
+  for wn in ${in_status[@]};do
+    if ! echo ${names[@]}|grep -q $wn;then
+      ip=$(grep $wn "$WN_LIST"|cut -d" " -f2)
+      names=(${names[@]} ${wn})
+      ips=(${ips[@]} ${ip})
+    fi
+  done
+
+  # Make wn list
+  n=0
+  wns=""
+  : > "$WN_LIST"
+  while [ $n -lt ${#names[@]} ];do
+    wns="$wns condor@\$(UID_DOMAIN)/${ips[$n]} condor_pool@\$(UID_DOMAIN)/${ips[$n]}"
+    echo "${names[$n]} ${ips[$n]}" >> "$WN_LIST"
+    ((n++))
+  done
+
+  # Update config for collector
+  condor_config_val -collector -set "WNS = $wns"
+  condor_reconfig -collector
+}
+
+update_wns
+
+# Main loop
+first=1
+while :;do
+  if [ $first -eq 0 ];then  
+    read_config
+  fi
+  first=0
 
   # Check instances
   all=()
   terminated=()
+  running=()
   while read line;do
     instance=($line)
+    name=${instance[0]}
     state=${instance[((${#instance[@]}-1))]}
     if [ "$state" == "TERMINATED" ];then
-      echo $reuse
       if [ $reuse -eq 1 ];then
-        all=(${all[@]} ${instance[0]})
-        terminated=(${terminated[@]} ${instance[0]})
+        all=(${all[@]} ${name})
+        terminated=(${terminated[@]} ${name})
       else
-        echo "$ gcloud compute instances delete ${instance[0]} $zone"
-        gcloud compute instances delete ${instance[0]} $zone
+        echo "$ gcloud compute instances delete ${name} $zone"
+        gcloud compute instances delete ${name} $zone
+        echo ""
+        # Update worker node information
+        update_wns
       fi
-    else
-      all=(${all[@]} ${instance[0]})
+    elif [ "$state" == "RUNNING" ];then
+      all=(${all[@]} ${name})
     fi
   done < <(eval gcloud compute instances list $filter|grep "^$prefix_1core")
 
   # Check condor status
   # 0: "Total", 1: Machines, 2: Owner, 3: Claimed, 4: Unclaimed, 5: Matched, 6: Preempting, 7: Drain
+  total=($(condor_status -format "%s\n" Name|grep "slot1@${prefix_1core}"|wc -l))
   total=($(condor_status -total |grep Total))
   if [ -z "${total[0]}" ] || ( [ ${total[1]} -lt $max ] && [ ${total[4]} -eq 0 ] );then
-    n=1
+
+    # start/create instance
+    instance_name=""
     if [ ${#terminated[@]} -gt 0 ];then
-      echo "$ gcloud compute start ${terminated[0]} $option"
-      gcloud compute start ${terminated[0]} $option
+      instance_name=${terminated[0]}
+      echo "$ gcloud compute start $instance_name $option"
+      gcloud compute start $instance_name $option
+      echo ""
     else
+      n=1
       while [ $n -lt 10000 ];do
-        name=${prefix_1core}-$(printf "%04d" $n)
-        if ! echo ${all[*]}|grep -q $name;then
-          echo "$ gcloud compute instances create $name $option"
-          gcloud compute instances create $name $option
-          try=0
-          while [ -z "$(condor_status |grep $name)" ];do
-            ((try++))
-            if [ $try -gt 100 ];then
-              echo "condor in $name is still not running:"
-              echo "Please check $name status"
-              break
-            fi
-            sleep 1
-          done
+        instance_name=${prefix_1core}-$(printf "%04d" $n)
+        if ! echo ${all[*]}|grep -q $instance_name;then
+          echo "$ gcloud compute instances create $instance_name $option"
+          gcloud compute instances create $instance_name $option
+          echo ""
           break
         fi
+        instance_name=""
         ((n++))
+      done
+    fi
+    if [ -n "$instance_name" ];then
+      # Update worker node information
+      update_wns
+      
+      # Check new instance in the pool
+      try=0
+      while [ -z "$(condor_status |grep $instance_name)" ];do
+        ((try++))
+        if [ $try -gt 100 ];then
+          echo "WARNING: $instance_name is still not available in the condor pool."
+          echo "WARNING: Please check $instance_name status"
+          break
+        fi
+        sleep 1
       done
     fi
   fi
 
-  sleep 10
+  sleep $interval
 done
