@@ -13,5 +13,7 @@ Prepare ~/.config/gcp_condor_pool_manager/config like:
     preemptible 1
     zones asia-northeast1-b
     image gcp-wn-1core
+    reuse 0
+    interval 10
 
 Prepare condor worker image (and set its name for image in config).
