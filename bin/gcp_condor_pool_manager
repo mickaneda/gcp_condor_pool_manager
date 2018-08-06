@@ -6,8 +6,10 @@ if ! type gcloud >& /dev/null;then
 fi
 
 # Config file
-CONFIG_FILE=~/.config/gcp_condor_pool_manager/config
-WN_LIST=~/.config/gcp_condor_pool_manager/wn_list
+CONFIG_DIR="${HOME}/.config/gcp_condor_pool_manager"
+CONFIG_FILE="${CONFIG_DIR}/config"
+WN_LIST="${CONFIG_DIR}/wn_list"
+STARTUP="${CONFIG_DIR}/startup.sh"
 
 # Default parameters
 max=0
@@ -17,6 +19,7 @@ preemptible=0
 zones=""
 reuse=0
 interval=10
+head_info=gce
 params=(max prefix_1core image preemptible zones reus interval)
 
 # Functions: Show setup
@@ -166,6 +169,34 @@ update_wns () {
 
 update_wns
 
+# Make startup script
+
+if [ "$head_info" = "hostname" ];then
+  head=${HOSTNAME}
+elif [ "$head_info" = "ip" ];then
+  head=$(hostname -i)
+elif [ "$head_info" = "gce" ];then
+  instances=($(gcloud compute instances list |grep "^$HOSTNAME "))
+  head=${instances[((${#instances[@]}-2))]}
+else
+  head=$($head_info)
+fi
+
+cat << EOF > "${STARTUP}"
+#/bin/bash
+sed -i"" 's/FIXME_HOST/$(hostname -i)/' /etc/condor/config.d/10_security.config
+systemctl enable condor
+systemctl start condor
+while :;do
+  condor_reconfig
+  status="\$(condor_status | grep "\${head}")"
+  if [ -n "\$status" ];then
+    break
+  fi
+  sleep 10
+done
+EOF
+
 # Main loop
 first=1
 while :;do
@@ -215,8 +246,8 @@ while :;do
       while [ $n -lt 10000 ];do
         instance_name=${prefix_1core}-$(printf "%04d" $n)
         if ! echo ${all[*]}|grep -q $instance_name;then
-          echo "$ gcloud compute instances create $instance_name $option"
-          gcloud compute instances create $instance_name $option
+          echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=$STARTUP $option" 
+          gcloud compute instances create $instance_name --metadata-from-file startup-script="${STARTUP}" $option
           echo ""
           break
         fi
