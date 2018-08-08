@@ -19,7 +19,7 @@ preemptible=0
 zones=""
 reuse=0
 interval=10
-head_info=gce
+head_info=gcp
 params=(max prefix_1core image preemptible zones reus interval)
 
 # Functions: Show setup
@@ -134,10 +134,14 @@ update_wns () {
     instance=($line)
     name=${instance[0]}
     state=${instance[((${#instance[@]}-1))]}
-    external_ip=${instance[((${#instance[@]}-2))]}
+    if [ "$head_info" = "gcp" ];then
+      ip=${instance[((${#instance[@]}-3))]}
+    else
+      ip=${instance[((${#instance[@]}-2))]}
+    fi
     if [ "$state" == "RUNNING" ];then
       names=(${names[@]} ${name})
-      ips=(${ips[@]} ${external_ip})
+      ips=(${ips[@]} ${ip})
     fi
   done < <(eval gcloud compute instances list $filter|grep "^$prefix_1core")
 
@@ -175,21 +179,22 @@ if [ "$head_info" = "hostname" ];then
   head=${HOSTNAME}
 elif [ "$head_info" = "ip" ];then
   head=$(hostname -i)
-elif [ "$head_info" = "gce" ];then
-  instances=($(gcloud compute instances list |grep "^$HOSTNAME "))
-  head=${instances[((${#instances[@]}-2))]}
+elif [ "$head_info" = "gcp" ];then
+  head=${HOSTNAME}
+  #instances=($(gcloud compute instances list |grep "^$HOSTNAME "))
+  #head=${instances[((${#instances[@]}-2))]}
 else
   head=$($head_info)
 fi
 
 cat << EOF > "${STARTUP}"
 #/bin/bash
-sed -i"" 's/FIXME_HOST/$(hostname -i)/' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_HOST/${head}' /etc/condor/config.d/10_security.config
 systemctl enable condor
 systemctl start condor
 while :;do
   condor_reconfig
-  status="\$(condor_status | grep "\${head}")"
+  status="\$(condor_status | grep "\${HOSTNAME}")"
   if [ -n "\$status" ];then
     break
   fi
