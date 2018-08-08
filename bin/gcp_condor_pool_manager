@@ -20,7 +20,7 @@ zones=""
 reuse=0
 interval=10
 head_info=gcp
-params=(max prefix_1core image preemptible zones reus interval)
+params=(max prefix_1core image preemptible zones reus interval head_info)
 
 # Functions: Show setup
 show_setup () {
@@ -85,6 +85,9 @@ read_config () {
         check_var reuse "$var" 1 1
       elif [ "$name" = "interval" ];then
         check_var reuse "$var" 1 1
+      elif [ "$name" = "head_info" ];then
+        check_var reuse "$var" 0 1
+      fi
       fi
     done < "$CONFIG_FILE"
     if [ $is_updated -eq 1 ];then
@@ -184,11 +187,12 @@ elif [ "$head_info" = "gcp" ];then
   #instances=($(gcloud compute instances list |grep "^$HOSTNAME "))
   #head=${instances[((${#instances[@]}-2))]}
 else
-  head=$($head_info)
+  head=$head_info
 fi
 
 cat << EOF > "${STARTUP}"
 #/bin/bash
+sed -i"" 's/FIXME_DOMAIN/$(hostname -d)' /etc/condor/config.d/10_security.config
 sed -i"" 's/FIXME_HOST/${head}' /etc/condor/config.d/10_security.config
 systemctl enable condor
 systemctl start condor
