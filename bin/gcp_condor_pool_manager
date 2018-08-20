@@ -88,7 +88,6 @@ read_config () {
       elif [ "$name" = "head_info" ];then
         check_var reuse "$var" 0 1
       fi
-      fi
     done < "$CONFIG_FILE"
     if [ $is_updated -eq 1 ];then
       show_setup
