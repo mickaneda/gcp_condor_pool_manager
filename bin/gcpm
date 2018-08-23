@@ -8,7 +8,9 @@ STARTUP="${CONFIG_DIR}/startup.sh"
 
 # Default parameters
 max=0
-prefix_1core=""
+prefix=""
+core=1
+mem=3000
 image=""
 preemptible=0
 zones=""
@@ -16,7 +18,9 @@ reuse=0
 interval=10
 head_info=gcp
 bucket=gs://gcpm-condor
-params=(max prefix_1core image preemptible zones reus interval head_info bucket)
+admin=""
+owner=""
+params=(max prefix core mem image preemptible zones reus interval head_info bucket admin owner)
 
 # Other variables
 pool_password=""
@@ -121,8 +125,12 @@ read_config () {
     while read name var;do
       if [ "$name" = "max" ];then
         check_var max "$var" 1 1
-      elif [ "$name" = "prefix_1core" ];then
-        check_var prefix_1core "$var" 0 1
+      elif [ "$name" = "prefix" ];then
+        check_var prefix "$var" 0 1
+      elif [ "$name" = "core" ];then
+        check_var core "$var" 1 1
+      elif [ "$name" = "mem" ];then
+        check_var mem "$var" 1 1
       elif [ "$name" = "image" ];then
         check_var image "$var" 0 1
       elif [ "$name" = "preemptible" ];then
@@ -138,6 +146,10 @@ read_config () {
         check_var head_info "$var" 0 1
       elif [ "$name" = "bucket" ];then
         check_var bucket "$var" 1 0
+      elif [ "$name" = "admin" ];then
+        check_var admin "$var" 1 0
+      elif [ "$name" = "owner" ];then
+        check_var owner "$var" 1 0
       fi
     done < "$CONFIG_FILE"
     if [ $is_updated -eq 1 ];then
@@ -189,8 +201,8 @@ if [ "$max" -eq 0 ];then
   exit 1
 fi
 
-if [ -z "$prefix_1core" ];then
-  echo "ERROR: set prefix_1core"
+if [ -z "$prefix" ];then
+  echo "ERROR: set prefix"
   exit 2
 fi
 
@@ -214,10 +226,10 @@ update_wns () {
       names=(${names[@]} ${name})
       ips=(${ips[@]} ${ip})
     fi
-  done < <(eval gcloud compute instances list $filter|grep "^$prefix_1core")
+  done < <(eval gcloud compute instances list $filter|grep "^$prefix")
 
   # Check instance which is not running, but in condor_status (should be in the list until it is removed from the status)
-  in_status=($(condor_status -format "%s\n" Name|grep "slot1@${prefix_1core}"|cut -d"@" -f2|cut -d"." -f1))
+  in_status=($(condor_status -format "%s\n" Name|grep "slot1@${prefix}"|cut -d"@" -f2|cut -d"." -f1))
   touch "$WN_LIST"
   for wn in ${in_status[@]};do
     if ! echo ${names[@]}|grep -q $wn;then
@@ -260,6 +272,11 @@ fi
 
 cat << EOF > "${STARTUP}"
 #/bin/bash
+sed -i"" 's/FIXME_ADMIN/${admin}' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_OWNER/${owner}' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_CORE/1' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_MEM/3000' /etc/condor/config.d/10_security.config
+
 sed -i"" 's/FIXME_DOMAIN/$(hostname -d)' /etc/condor/config.d/10_security.config
 sed -i"" 's/FIXME_HOST/${head}' /etc/condor/config.d/10_security.config
 gsutil cp "${bucket}/pool_password" /etc/condor/
@@ -305,11 +322,11 @@ while :;do
     elif [ "$state" == "RUNNING" ];then
       all=(${all[@]} ${name})
     fi
-  done < <(eval gcloud compute instances list $filter|grep "^$prefix_1core")
+  done < <(eval gcloud compute instances list $filter|grep "^$prefix")
 
   # Check condor status
   # 0: "Total", 1: Machines, 2: Owner, 3: Claimed, 4: Unclaimed, 5: Matched, 6: Preempting, 7: Drain
-  #total=($(condor_status -format "%s\n" Name|grep "slot1@${prefix_1core}"|wc -l))
+  #total=($(condor_status -format "%s\n" Name|grep "slot1@${prefix}"|wc -l))
   total=($(condor_status -total |grep Total))
   if [ -z "${total[0]}" ] || ( [ ${total[1]} -lt $max ] && [ ${total[4]} -eq 0 ] );then
 
@@ -323,7 +340,7 @@ while :;do
     else
       n=1
       while [ $n -lt 10000 ];do
-        instance_name=${prefix_1core}-$(printf "%04d" $n)
+        instance_name=${prefix}-$(printf "%04d" $n)
         if ! echo ${all[*]}|grep -q $instance_name;then
           echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=$STARTUP $option" 
           gcloud compute instances create $instance_name --metadata-from-file startup-script="${STARTUP}" $option

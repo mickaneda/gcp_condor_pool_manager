@@ -9,7 +9,9 @@ Install bin/gcp_condor_pool_manager in any directory in PATH.
 Prepare ~/.config/gcp_condor_pool_manager/config like:
 
     max 10
-    prefix_1core gcp-wn-1core
+    prefix gcp-wn-1core
+    core 1
+    mem 3000
     preemptible 1
     zones asia-northeast1-b
     image gcp-wn-1core
@@ -17,6 +19,8 @@ Prepare ~/.config/gcp_condor_pool_manager/config like:
     interval 10
     head_info gcp
     bucket gs://gcpm-condor
+    admin admin@example.com
+    owner CondorOwner
 
 Prepare condor worker image (and set its name for image in config).
 
