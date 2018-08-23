@@ -49,6 +49,8 @@ while [ $# -gt 0 ];do
     shift
   else
     echo "Unknown arguments: $*"
+    echo ""
+    echo "$HELP"
     exit 1
   fi
 done
@@ -260,6 +262,8 @@ cat << EOF > "${STARTUP}"
 #/bin/bash
 sed -i"" 's/FIXME_DOMAIN/$(hostname -d)' /etc/condor/config.d/10_security.config
 sed -i"" 's/FIXME_HOST/${head}' /etc/condor/config.d/10_security.config
+gsutil cp "${bucket}/pool_password" /etc/condor/
+chmod 600 /etc/condor/pool_password
 systemctl enable condor
 systemctl start condor
 while :;do
