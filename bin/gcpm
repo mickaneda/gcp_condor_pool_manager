@@ -15,7 +15,7 @@ zones=""
 reuse=0
 interval=10
 head_info=gcp
-bucket=gs://condor
+bucket=gs://gcpm-condor
 params=(max prefix_1core image preemptible zones reus interval head_info bucket)
 
 # Other variables
@@ -51,7 +51,7 @@ while [ $# -gt 0 ];do
     echo "Unknown arguments: $*"
     exit 1
   fi
-fi
+done
 
 # Check gcloud utils
 if ! type gcloud >& /dev/null;then
@@ -165,10 +165,19 @@ read_config
 # pool_password management
 if [ -n "$pool_password" ];then
   if ! gsutil ls | grep "${bucket}$" >/dev/null;then
-    gsutil mb -c regional -l $zone $bucket
+    z=${zone#*=}
+    z=${z%-*}
+    echo $ gsutil mb -c coldline -l $z $bucket
+    gsutil mb -c coldline -l $z $bucket
+    ret=$?
+    if [ $ret -ne 0 ];then
+      exit $ret
+    fi
   fi
+  echo $ gsutil cp "$pool_password" "${bucket}"
   gsutil cp "$pool_password" "${bucket}"
-  exit
+  ret=$?
+  exit $ret
 fi
 
 # Check parameters
