@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-if ! type gcloud >& /dev/null;then
-  echo "Intall gcloud: https://cloud.google.com/sdk/install"
-  exit 1
-fi
-
 # Config file
 CONFIG_DIR="${HOME}/.config/gcp_condor_pool_manager"
 CONFIG_FILE="${CONFIG_DIR}/config"
@@ -20,7 +15,59 @@ zones=""
 reuse=0
 interval=10
 head_info=gcp
-params=(max prefix_1core image preemptible zones reus interval head_info)
+bucket=gs://condor
+params=(max prefix_1core image preemptible zones reus interval head_info bucket)
+
+# Other variables
+pool_password=""
+
+# HELP
+HELP=$(cat << EOF
+Usage: gcpm [-h] [-f <config file>] [-p <pool_passwrd file>] 
+   -p  Pool file management
+   -f  Set config file
+   -h  print this help
+EOF
+)
+
+# Check arguments
+while [ $# -gt 0 ];do
+  if [ "$1" = "-h" ];then
+    echo "$HELP"
+    exit
+  elif [ "$1" = "-f" ];then
+    shift
+    CONFIG_FILE="$1"
+    shit
+  elif [ "$1" = "-p" ];then
+    shift
+    pool_password="$1"
+    if [ -z "$pool_password" ];then
+      echo "pool_password file is empty"
+      exit 1
+    fi
+    shift
+  else
+    echo "Unknown arguments: $*"
+    exit 1
+  fi
+fi
+
+# Check gcloud utils
+if ! type gcloud >& /dev/null;then
+  echo "gcloud tools are not installed, do you want to install?"
+  while : ;do
+    echo "$message [y/n]: " >/dev/tty
+    read -srn 1 ans </dev/tty
+    if [ "$ans" = "y" ];then
+      curl https://sdk.cloud.google.com | bash
+      break
+    elif [ "$_s_read" = "n" ];then
+      echo "Intall gcloud: https://cloud.google.com/sdk/install"
+      exit 1
+    fi
+  done
+fi
 
 # Functions: Show setup
 show_setup () {
@@ -84,9 +131,11 @@ read_config () {
       elif [ "$name" = "reuse" ];then
         check_var reuse "$var" 1 1
       elif [ "$name" = "interval" ];then
-        check_var reuse "$var" 1 1
+        check_var name "$var" 1 1
       elif [ "$name" = "head_info" ];then
-        check_var reuse "$var" 0 1
+        check_var head_info "$var" 0 1
+      elif [ "$name" = "bucket" ];then
+        check_var bucket "$var" 1 0
       fi
     done < "$CONFIG_FILE"
     if [ $is_updated -eq 1 ];then
@@ -112,6 +161,15 @@ read_config () {
 }
 
 read_config
+
+# pool_password management
+if [ -n "$pool_password" ];then
+  if ! gsutil ls | grep "${bucket}$" >/dev/null;then
+    gsutil mb -c regional -l $zone $bucket
+  fi
+  gsutil cp "$pool_password" "${bucket}"
+  exit
+fi
 
 # Check parameters
 
