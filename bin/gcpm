@@ -289,6 +289,8 @@ sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
 sed -i"" 's/FIXME_DOMAIN/${domain}/' /etc/condor/config.d/10_security.config
 
+sed -i"" "s/FIXME_PRIVATE_DOMAIN/\${hostname -d}/" /etc/condor/config.d/10_security.config
+
 sed -i"" 's/FIXME_OWNER/${owner}/' /etc/condor/config.d/20_workernode.config
 sed -i"" 's/FIXME_CORE/${core}/' /etc/condor/config.d/20_workernode.config
 sed -i"" 's/FIXME_MEM/${mem}/' /etc/condor/config.d/20_workernode.config
