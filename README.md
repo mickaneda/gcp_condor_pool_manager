@@ -26,7 +26,9 @@ Prepare ~/.config/gcp_condor_pool_manager/config like:
 Prepare condor worker image (and set its name for image in config).
 
 
-## Set pool_password
+## Usage
+
+### Set pool_password
 
 At head node, install HTCondor and create pool_password file:
 
@@ -39,7 +41,7 @@ Then, send it to Google Cloud Storage:
 
 Set `bucket` in your config file. (It must be used even by others. Set unique name.)
 
-## Usage
+### Manage pool
 
 Run gcpm:
 
@@ -48,3 +50,7 @@ Run gcpm:
 If you want to load different config file, use `-f`:
 
    $ gcpm -f /path/to/my_config
+
+### Edit configuration file
+
+   $ gcpm -e

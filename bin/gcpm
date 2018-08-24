@@ -21,7 +21,7 @@ head_info=hostname
 bucket=""
 admin=""
 owner=""
-params=(max prefix core mem image preemptible zones tag reus interval head_info bucket admin owner)
+params=(max prefix core mem image preemptible zones tag reuse interval head_info bucket admin owner)
 
 # Other variables
 pool_password=""
