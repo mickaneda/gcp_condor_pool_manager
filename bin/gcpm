@@ -14,13 +14,14 @@ mem=3000
 image=""
 preemptible=0
 zones=""
+tag=""
 reuse=0
 interval=10
 head_info=gcp
 bucket=gs://gcpm-condor
 admin=""
 owner=""
-params=(max prefix core mem image preemptible zones reus interval head_info bucket admin owner)
+params=(max prefix core mem image preemptible zones tag reus interval head_info bucket admin owner)
 
 # Other variables
 pool_password=""
@@ -138,6 +139,8 @@ read_config () {
       elif [ "$name" = "zones" ];then
         check_var zones "$var" 0 0
         zones=$(echo $var|tr , ' ')
+      elif [ "$name" = "tag" ];then
+        check_var tag "$var" 0 0
       elif [ "$name" = "reuse" ];then
         check_var reuse "$var" 1 1
       elif [ "$name" = "interval" ];then
@@ -171,6 +174,9 @@ read_config () {
     filter="--filter=\"zone:($(echo $zones|tr , ' '))\""
     zone="--zone=$(echo $zones|tr , ' '|cut -d' ' -f1)"
     option="${option} ${zone}"
+  fi
+  if [ -n "$tag" ];then
+    options="${option} --tags=$tag"
   fi
 }
 
