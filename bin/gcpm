@@ -383,6 +383,10 @@ while :;do
       # Check new instance in the pool
       try=0
       while [ -z "$(condor_status |grep $instance_name)" ];do
+        if [ -n "$(condor_status |grep $instance_name)" ];then
+          echo "$instance_name is added in the pool"
+          break
+        fi
         ((try++))
         if [ $try -gt 100 ];then
           echo "WARNING: $instance_name is still not available in the condor pool."
