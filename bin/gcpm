@@ -16,8 +16,8 @@ preemptible=0
 zones=""
 reuse=0
 interval=10
-head_info=gcp
-bucket=gs://gcpm-condor
+head_info=hostname
+bucket=""
 admin=""
 owner=""
 params=(max prefix core mem image preemptible zones reus interval head_info bucket admin owner)
@@ -99,15 +99,15 @@ check_var () {
 
   if [ $is_num -eq 1 ];then
     if ! expr $var + 1 >/dev/null 2>&1;then
-      echo "WARNING: $var must be number, $var is not allowed. Check your configuration file."
-      return 1
+      echo "ERROR: $var must be number, $var is not allowed. Check your configuration file."
+      exit 1
     fi
   fi
 
   if [ $no_empty -eq 1 ];then
     if [ -z "$var" ];then
-      echo "WARNING: $var must not be empty. Check your configuration file."
-      return 2
+      echo "ERROR: $var must not be empty. Check your configuration file."
+      exit 1
     fi
   fi
 
@@ -145,16 +145,21 @@ read_config () {
       elif [ "$name" = "head_info" ];then
         check_var head_info "$var" 0 1
       elif [ "$name" = "bucket" ];then
-        check_var bucket "$var" 1 0
+        check_var bucket "$var" 0 1
       elif [ "$name" = "admin" ];then
-        check_var admin "$var" 1 0
+        check_var admin "$var" 0 1
       elif [ "$name" = "owner" ];then
-        check_var owner "$var" 1 0
+        check_var owner "$var" 0 1
       fi
     done < "$CONFIG_FILE"
     if [ $is_updated -eq 1 ];then
       show_setup
     fi
+  fi
+
+  # Fix bucket
+  if [[ ! $bucket =~ gs://* ]];then
+    bucket="gs://$bucket"
   fi
 
   # Set gcloud options
@@ -269,16 +274,19 @@ elif [ "$head_info" = "gcp" ];then
 else
   head=$head_info
 fi
+domain=$(hostname -d)
 
 cat << EOF > "${STARTUP}"
 #/bin/bash
-sed -i"" 's/FIXME_ADMIN/${admin}' /etc/condor/config.d/10_security.config
-sed -i"" 's/FIXME_OWNER/${owner}' /etc/condor/config.d/10_security.config
-sed -i"" 's/FIXME_CORE/1' /etc/condor/config.d/10_security.config
-sed -i"" 's/FIXME_MEM/3000' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
-sed -i"" 's/FIXME_DOMAIN/$(hostname -d)' /etc/condor/config.d/10_security.config
-sed -i"" 's/FIXME_HOST/${head}' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_DOMAIN/${domain}/' /etc/condor/config.d/10_security.config
+
+sed -i"" 's/FIXME_OWNER/${owner}/' /etc/condor/config.d/20_workernode.config
+sed -i"" 's/FIXME_CORE/${core}/' /etc/condor/config.d/20_workernode.config
+sed -i"" 's/FIXME_MEM/${mem}/' /etc/condor/config.d/20_workernode.config
+
 gsutil cp "${bucket}/pool_password" /etc/condor/
 chmod 600 /etc/condor/pool_password
 systemctl enable condor
