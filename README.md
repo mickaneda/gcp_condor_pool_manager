@@ -14,6 +14,7 @@ Prepare ~/.config/gcp_condor_pool_manager/config like:
     mem 3000
     preemptible 1
     zones asia-northeast1-b
+    tag allow-head
     image gcp-wn-1core
     reuse 0
     interval 10
