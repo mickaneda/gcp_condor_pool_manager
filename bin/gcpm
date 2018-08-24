@@ -190,7 +190,7 @@ read_config () {
     option="${option} ${zone}"
   fi
   if [ -n "$tag" ];then
-    options="${option} --tags=$tag"
+    option="${option} --tags=$tag"
   fi
 }
 
