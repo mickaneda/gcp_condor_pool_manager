@@ -25,13 +25,15 @@ params=(max prefix core mem image preemptible zones tag reus interval head_info 
 
 # Other variables
 pool_password=""
+edit=0
 
 # HELP
 HELP=$(cat << EOF
-Usage: gcpm [-h] [-f <config file>] [-p <pool_passwrd file>] 
-   -p  Pool file management
-   -f  Set config file
-   -h  print this help
+Usage: gcpm [-h] [-f <config file>] [-p <pool_passwrd file>] [-e]
+   -p  <pool_password_file>   Pool file management
+   -f  <config file>          Set config file
+   -e                         Edit config file
+   -h                         print this help
 EOF
 )
 
@@ -43,7 +45,6 @@ while [ $# -gt 0 ];do
   elif [ "$1" = "-f" ];then
     shift
     CONFIG_FILE="$1"
-    shit
   elif [ "$1" = "-p" ];then
     shift
     pool_password="$1"
@@ -51,14 +52,21 @@ while [ $# -gt 0 ];do
       echo "pool_password file is empty"
       exit 1
     fi
-    shift
+  elif [ "$1" = "-e" ];then
+    edit=1
   else
     echo "Unknown arguments: $*"
     echo ""
     echo "$HELP"
     exit 1
   fi
+  shift
 done
+
+if [ "$edit" -eq 1 ];then
+  ${EDITOR:-vi} "$CONFIG_FILE"
+  exit $?
+fi
 
 # Check gcloud utils
 if ! type gcloud >& /dev/null;then
@@ -79,12 +87,13 @@ fi
 # Functions: Show setup
 show_setup () {
   echo ""
-  echo "=========================="
+  echo "================================================================================"
   echo "$(date): parameters updated"
+  echo "Configuration file: $CONFIG_FILE"
   for p in ${params[@]};do
     eval "echo \$p = \$$p"
   done
-  echo "=========================="
+  echo "================================================================================"
   echo ""
 }
 
