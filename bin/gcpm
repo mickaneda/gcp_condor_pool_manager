@@ -7,21 +7,23 @@ WN_LIST="${CONFIG_DIR}/wn_list"
 STARTUP_PREFIX="${CONFIG_DIR}/startup"
 
 # Default parameters
-max=(0)
-prefix=""
+max=(10)
+prefix="gcep-wn"
 core=(1)
 mem=(3750)
 image=()
 preemptible=0
-zones=""
-tag=""
-reuse=0
+off_timer=0
+zones="" # e.g. asia-northeast1-b
+tag="" # e.g. allow-head
+reuse=0 
 interval=10
 head_info=gcp
-bucket=""
-admin=""
-owner=""
-params=(max prefix core mem image preemptible zones tag reuse interval head_info bucket admin owner)
+bucket="" # e.g. gs://gcpm-condor (must be unique in entire GCP)
+admin="" # e.g. admin@example.com
+owner="" # e.g. CondorOwner
+
+params=(max prefix core mem image preemptible off_timer zones tag reuse interval head_info bucket admin owner)
 params_no_empty=(max prefix core mem image head_info bucket admin owner)
 
 # Other variables
@@ -172,7 +174,15 @@ while :;do
   fi
   sleep 10
 done
+date > /root/condor_started
 EOF
+    if [ $off_timer -ne 0 ];then
+      cat << EOF >> "${STARTUP_PREFIX}-${core[$i]}core.sh"
+sleep $off_timer
+condor_off -peaceful -startd
+date > /root/condor_off
+EOF
+    fi
   done
 }
 
@@ -194,6 +204,8 @@ read_config () {
         check_var image "$var" 0 1 1
       elif [ "$name" = "preemptible" ];then
         check_var preemptible "$var" 1 1
+      elif [ "$name" = "off_timer" ];then
+        check_var off_timer "$var" 1 1
       elif [ "$name" = "zones" ];then
         check_var zones "$var" 0 0
         zones=$(echo $var|tr , ' ')
@@ -217,14 +229,12 @@ read_config () {
     echo "Configuration file:$CONFIG_FILE doesn't exist"
     esit 1
   fi
- 
-  if [ $is_updated -eq 1 ];then
-    show_setup
-  else
-    return
+
+  # No reuse for non zero off timer nodes
+  if [ $off_timer -ne 0 ];then
+    reuse=0
   fi
-
-
+ 
   # check variables
   for v in ${params_no_empty[@]};do
     if [ -z "$(eval "echo \$$v")" ];then
@@ -243,6 +253,12 @@ read_config () {
   if [ ${#core[@]} -gt ${#image[@]} ];then
     echo "core and image have different number of definitions"
     exit 1
+  fi
+
+  if [ $is_updated -eq 1 ];then
+    show_setup
+  else
+    return
   fi
 
   # Set head information, and make startup script
@@ -333,8 +349,13 @@ update_wns () {
   for wn in ${in_status[@]};do
     if ! echo ${names[@]}|grep -q $wn;then
       ip=$(grep $wn "$WN_LIST"|cut -d" " -f2)
-      names=(${names[@]} ${wn})
-      ips=(${ips[@]} ${ip})
+      if [ -n "$ip" ];then
+        names=(${names[@]} ${wn})
+        ips=(${ips[@]} ${ip})
+      else
+        date
+        echo "WARNIING: $wn is listed in the status, but not listed in $WN_LIST nor gcp pool"
+      fi
     fi
   done
 
@@ -357,6 +378,27 @@ update_wns () {
 
 update_wns
 
+# Functions: Clean up worker nodes
+clean_wns () {
+  # Delete instances not in condor_status, which were removed by condor_off
+  in_status="$(condor_status -autoformat Name|cut -d"." -f1)"
+  is_deleted=0
+  while read line;do
+    instance=($line)
+    name=${instance[0]}
+    if [[ "$in_status" != *${name}* ]];then
+      date
+      echo "$ gcloud compute instances delete ${name} $zone"
+      echo y|gcloud compute instances delete ${name} $zone
+      echo ""
+      is_deleted=1
+    fi
+  done < <(eval gcloud compute instances list $filter|grep "^$prefix")
+  if [ $is_deleted -eq 1 ];then
+    update_wns
+  fi
+}
+
 # Main loop
 first=1
 while :;do
@@ -364,6 +406,9 @@ while :;do
     read_config
   fi
   first=0
+
+  # Cleanup worker nodes
+  clean_wns
 
   # Check instances
   all=()
