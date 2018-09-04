@@ -349,8 +349,10 @@ update_wns () {
   done
 
   # Update config for collector
-  condor_config_val -collector -set "WNS = $wns"
-  condor_reconfig -collector
+  #date
+  #echo $ condor_config_val -collector -set "WNS = $wns"
+  condor_config_val -collector -set "WNS = $wns" >/dev/null #echo $condor_reconfig -collector
+  condor_reconfig -collector >/dev/null
 }
 
 update_wns
