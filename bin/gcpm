@@ -105,7 +105,7 @@ check_var () {
   local is_num="${3:-0}"
   local no_empty="${4:-0}"
   local array="${4:-0}"
-  if [ "$var" = "$(eval "echo \$$name")" ];then
+  if [ "${var[*]}" = "$(eval "echo \${$name[*]}")" ];then
     return 0
   fi
 
@@ -147,7 +147,7 @@ make_startup () {
   # Make startup script
 
   local i=0
-  while [ $i -lt ${#core[@]} ];do
+  for((i=0;i<${#core[@]};i++));do
     cat << EOF > "${STARTUP_PREFIX}-${core[$i]}core.sh"
 #/bin/bash
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
@@ -214,10 +214,17 @@ read_config () {
         check_var owner "$var" 0 1
       fi
     done < "$CONFIG_FILE"
-    if [ $is_updated -eq 1 ];then
-      show_setup
-    fi
+  else
+    echo "Configuration file:$CONFIG_FILE doesn't exist"
+    esit 1
   fi
+ 
+  if [ $is_updated -eq 1 ];then
+    show_setup
+  else
+    return
+  fi
+
 
   # check variables
   for v in ${params_no_empty[@]};do
@@ -381,8 +388,7 @@ while :;do
     fi
   done < <(eval gcloud compute instances list $filter|grep "^$prefix")
 
-  local i=0
-  while [ $i in ${#core[@]} ];do
+  for((i=0;i<${#core[@]};i++));do
     prefix_core=${prefix}-${core[$i]}core
     machines="$(condor_status -autoformat Name State|grep $prefix_core)"
     n_machines=$(echo $(echo "$machines"|wc -l))
