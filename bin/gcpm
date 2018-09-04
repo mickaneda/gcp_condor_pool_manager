@@ -148,7 +148,7 @@ make_startup () {
 
   local i=0
   while [ $i -lt ${#core[@]} ];do
-    cat << EOF > "${STARTUP}-${core[$i]}core.sh"
+    cat << EOF > "${STARTUP_PREFIX}-${core[$i]}core.sh"
 #/bin/bash
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
@@ -407,8 +407,8 @@ while :;do
           instance_name=${prefix_core}-$(printf "%04d" $n)
           if ! echo ${all[*]}|grep -q $instance_name;then
             date
-            echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=${STARTUP}-${core[$i]}core.sh $option --image ${image[$i]}"
-            gcloud compute instances create $instance_name --metadata-from-file startup-script="${STARTUP}-${core[$i]}core.sh" $option --image ${image[$i]}
+            echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=${STARTUP_PREFIX}-${core[$i]}core.sh $option --image ${image[$i]}"
+            gcloud compute instances create $instance_name --metadata-from-file startup-script="${STARTUP_PREFIX}-${core[$i]}core.sh" $option --image ${image[$i]}
             echo ""
             break
           fi
