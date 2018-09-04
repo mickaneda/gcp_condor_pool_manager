@@ -394,7 +394,6 @@ while :;do
     n_unclaimed=$(echo $(echo "$machines"|grep " Unclaimed"|wc -l))
 
     if [ $n_unclaimed -eq 0 ] && [ $n_machines -lt ${max[$i]} ];then
-
       # start/create instance
       instance_name=""
       for instance in "${terminated[@]}";do
@@ -406,7 +405,7 @@ while :;do
           echo ""
         fi
       done
-      if [ -n "$instance_name" ];then
+      if [ -z "$instance_name" ];then
         n=1
         while [ $n -lt 10000 ];do
           instance_name=${prefix_core}-$(printf "%04d" $n)
