@@ -92,7 +92,7 @@ show_setup () {
   echo "$(date): parameters updated"
   echo "Configuration file: $CONFIG_FILE"
   for p in ${params[@]};do
-    eval "echo \$p = \$$p"
+    eval "echo \$p = \${$p[@]}"
   done
   echo "================================================================================"
   echo ""
