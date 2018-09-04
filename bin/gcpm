@@ -127,6 +127,37 @@ check_var () {
   return 0
 }
 
+make_startup () {
+  # Make startup script
+
+  cat << EOF > "${STARTUP}"
+#/bin/bash
+sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
+
+sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_DOMAIN/${domain}/' /etc/condor/config.d/10_security.config
+
+sed -i"" "s/FIXME_PRIVATE_DOMAIN/\${hostname -d}/" /etc/condor/config.d/10_security.config
+
+sed -i"" 's/FIXME_OWNER/${owner}/' /etc/condor/config.d/20_workernode.config
+sed -i"" 's/FIXME_CORE/${core}/' /etc/condor/config.d/20_workernode.config
+sed -i"" 's/FIXME_MEM/${mem}/' /etc/condor/config.d/20_workernode.config
+
+gsutil cp "${bucket}/pool_password" /etc/condor/
+chmod 600 /etc/condor/pool_password
+systemctl enable condor
+systemctl start condor
+while :;do
+  condor_reconfig
+  status="\$(condor_status | grep "\${HOSTNAME}")"
+  if [ -n "\$status" ];then
+    break
+  fi
+  sleep 10
+done
+EOF
+}
+
 read_config () {
   if [ -f "$CONFIG_FILE" ];then
     is_updated=0
@@ -168,6 +199,21 @@ read_config () {
       show_setup
     fi
   fi
+
+  # Set head information, and make startup script
+  if [ "$head_info" = "hostname" ];then
+    head=${HOSTNAME}
+  elif [ "$head_info" = "ip" ];then
+    head=$(hostname -i)
+  elif [ "$head_info" = "gcp" ];then
+    head=${HOSTNAME}
+    #instances=($(gcloud compute instances list |grep "^$HOSTNAME "))
+    #head=${instances[((${#instances[@]}-2))]}
+  else
+    head=$head_info
+  fi
+  domain=$(hostname -d)
+  make_startup
 
   # Fix bucket
   if [[ ! $bucket =~ gs://* ]];then
@@ -276,48 +322,6 @@ update_wns () {
 
 update_wns
 
-# Make startup script
-
-if [ "$head_info" = "hostname" ];then
-  head=${HOSTNAME}
-elif [ "$head_info" = "ip" ];then
-  head=$(hostname -i)
-elif [ "$head_info" = "gcp" ];then
-  head=${HOSTNAME}
-  #instances=($(gcloud compute instances list |grep "^$HOSTNAME "))
-  #head=${instances[((${#instances[@]}-2))]}
-else
-  head=$head_info
-fi
-domain=$(hostname -d)
-
-cat << EOF > "${STARTUP}"
-#/bin/bash
-sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
-
-sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
-sed -i"" 's/FIXME_DOMAIN/${domain}/' /etc/condor/config.d/10_security.config
-
-sed -i"" "s/FIXME_PRIVATE_DOMAIN/\${hostname -d}/" /etc/condor/config.d/10_security.config
-
-sed -i"" 's/FIXME_OWNER/${owner}/' /etc/condor/config.d/20_workernode.config
-sed -i"" 's/FIXME_CORE/${core}/' /etc/condor/config.d/20_workernode.config
-sed -i"" 's/FIXME_MEM/${mem}/' /etc/condor/config.d/20_workernode.config
-
-gsutil cp "${bucket}/pool_password" /etc/condor/
-chmod 600 /etc/condor/pool_password
-systemctl enable condor
-systemctl start condor
-while :;do
-  condor_reconfig
-  status="\$(condor_status | grep "\${HOSTNAME}")"
-  if [ -n "\$status" ];then
-    break
-  fi
-  sleep 10
-done
-EOF
-
 # Main loop
 first=1
 while :;do
@@ -338,6 +342,7 @@ while :;do
         all=(${all[@]} ${name})
         terminated=(${terminated[@]} ${name})
       else
+        date
         echo "$ gcloud compute instances delete ${name} $zone"
         gcloud compute instances delete ${name} $zone
         echo ""
@@ -359,6 +364,7 @@ while :;do
     instance_name=""
     if [ ${#terminated[@]} -gt 0 ];then
       instance_name=${terminated[0]}
+      date
       echo "$ gcloud compute start $instance_name $option"
       gcloud compute start $instance_name $option
       echo ""
@@ -367,6 +373,7 @@ while :;do
       while [ $n -lt 10000 ];do
         instance_name=${prefix}-$(printf "%04d" $n)
         if ! echo ${all[*]}|grep -q $instance_name;then
+          date
           echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=$STARTUP $option" 
           gcloud compute instances create $instance_name --metadata-from-file startup-script="${STARTUP}" $option
           echo ""
@@ -384,11 +391,13 @@ while :;do
       try=0
       while [ -z "$(condor_status |grep $instance_name)" ];do
         if [ -n "$(condor_status |grep $instance_name)" ];then
+          date
           echo "$instance_name is added in the pool"
           break
         fi
         ((try++))
         if [ $try -gt 100 ];then
+          date 
           echo "WARNING: $instance_name is still not available in the condor pool."
           echo "WARNING: Please check $instance_name status"
           break
