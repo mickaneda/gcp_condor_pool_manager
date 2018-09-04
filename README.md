@@ -25,6 +25,8 @@ Prepare ~/.config/gcp_condor_pool_manager/config like:
 
 Prepare condor worker image (and set its name for image in config).
 
+For max, core, mem, and image, multiple settings can be set separated by ",".
+
 
 ## Usage
 

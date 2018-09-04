@@ -1,6 +1,13 @@
-max 10
-prefix_1core gcp-wn-1core
+max 10,10
+prefix gcp-wn
+core 1,8
+mem 3750,30000
 preemptible 1
 zones asia-northeast1-b
-image gcp-wn-1core
-reuse=0
+tag allow-head
+image gcp-wn-1core,gcp-wn-8core
+reuse 0
+head_info hostname
+bucket gs://gcpm-condor
+admin admin@example.com
+owner Owner
