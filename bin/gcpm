@@ -105,14 +105,13 @@ check_var () {
   local is_num="${3:-0}"
   local no_empty="${4:-0}"
   local array="${4:-0}"
-  if [ "${var[*]}" = "$(eval "echo \${$name[*]}")" ];then
-    return 0
-  fi
-
   if [ $array -eq 1 ];then
     var=(${var//,/ })
   else
     var=($var)
+  fi
+  if [ "${var[*]}" = "$(eval "echo \${$name[*]}")" ];then
+    return 0
   fi
 
   if [ $is_num -eq 1 ];then
