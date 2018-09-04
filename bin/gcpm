@@ -379,7 +379,7 @@ while :;do
       else
         date
         echo "$ gcloud compute instances delete ${name} $zone"
-        echo -y|gcloud compute instances delete ${name} $zone
+        echo y|gcloud compute instances delete ${name} $zone
         echo ""
         # Update worker node information
         update_wns
