@@ -477,6 +477,7 @@ while :;do
           if [ -n "$(condor_status |grep $instance_name)" ];then
             date
             echo "$instance_name is added in the pool"
+            echo
             break
           fi
           ((try++))
