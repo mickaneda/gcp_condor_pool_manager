@@ -63,7 +63,7 @@ edit=0
 HELP=$(cat << EOF
 Usage: gcpm  [-eh] [-f <config file>] [-l <log level>] [-p <pool_password file>]
    -f  <config file>          Set config file
-   -l  <log level>            Set log level
+   -l  <log level>            Set log level (DEBUG, INFO (default), NOTICE, WARNING, ERROR)
    -p  <pool_password_file>   Pool file management
    -e                         Edit config file
    -v                         Show version
@@ -158,7 +158,7 @@ while getopts evhf:l:p: OPT;do
     "e" ) edit=1;;
     "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR"; exit;;
     "h" ) echo "$HELP"; exit;;
-    * ) echo "Unknown arguments: $OPT"; echo; echo "HELP"; exit 1;;
+    * ) echo "Unknown arguments: $OPT"; echo; echo "$HELP"; exit 1;;
   esac
 done
 
