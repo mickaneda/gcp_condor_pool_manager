@@ -8,7 +8,7 @@ STARTUP_PREFIX="${CONFIG_DIR}/startup"
 
 # Default parameters
 max=(10)
-max_cores=0 # Set non-zero if you want to limit in total number of cores, instead of each core numbers (ignore "max")
+max_cores=0 # Set non-zero if you want to limit in total number of cores in addition to max for each
 prefix="gcep-wn"
 core=(1)
 mem=(3750)
@@ -194,9 +194,9 @@ read_config () {
     local var
     while read -r name var;do
       if [ "$name" = "max" ];then
-        check_var max "$var" 1 0 1
+        check_var max "$var" 1 1 1
       elif [ "$name" = "max_cores" ];then
-        check_var max_cores "$var" 1 0
+        check_var max_cores "$var" 1 1
       elif [ "$name" = "prefix" ];then
         check_var prefix "$var" 0 1
       elif [ "$name" = "core" ];then
@@ -245,17 +245,10 @@ read_config () {
       exit 1
     fi
   done
-  if [[ "$max_cores" -eq 0 && "${#core[@]}" -eq 0 ]];then
-    echo "Set max or max_cores"
+
+  if [ ${#core[@]} -gt ${#max[@]} ];then
+    echo "core and max have different number of definitions"
     exit 1
-  fi
-  if [ "$max_cores" -eq 1 ];then
-    max=()
-  else
-    if [ ${#core[@]} -gt ${#max[@]} ];then
-      echo "core and max have different number of definitions"
-      exit 1
-    fi
   fi
   if [ ${#core[@]} -gt ${#mem[@]} ];then
     echo "core and memory have different number of definitions"
@@ -468,18 +461,11 @@ while :;do
   done < <(eval gcloud compute instances list $filter|grep "^$prefix")
 
   for((i=0;i<${#core[@]};i++));do
-    machines="$(condor_status -autoformat Name State|grep ${prefix_core[$i]})"
-    n_unclaimed=$(echo $(echo "$machines"|grep " Unclaimed"|wc -l))
+    machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
+    n_machines=$(echo "$machines"|wc -l)
+    n_unclaimed=$(echo "$machines"|grep -c " Unclaimed")
 
-    core_check=0
-    if [[ $max_cores -ne 0 ]];then
-      [[ $((total_cores+${core[$i]})) -le $max_cores ]] && core_check=1
-    else
-      n_machines=$(echo "$machines"|wc -l)
-      [[ $n_machines -lt ${max[$i]} ]] && core_check=1
-    fi
-
-    if [[ $n_unclaimed -eq 0 ]] && [[ $core_check -eq 1 ]];then
+    if [[ $n_unclaimed -eq 0 && $((total_cores+${core[$i]})) -le $max_cores && $n_machines -lt ${max[$i]} ]];then
       # start/create instance
       instance_name=""
       for instance in "${terminated[@]}";do
@@ -487,7 +473,7 @@ while :;do
           instance_name=$instance
           date
           echo "$ gcloud compute start $instance_name"
-          gcloud compute start $instance_name
+          gcloud compute start "$instance_name"
           echo ""
         fi
       done
@@ -495,7 +481,7 @@ while :;do
         n=1
         while [ $n -lt 10000 ];do
           instance_name=${prefix_core[$i]}-$(printf "%04d" $n)
-          if ! echo ${all[*]}|grep -q $instance_name;then
+          if ! echo "${all[*]}"|grep -q "$instance_name";then
             date
             echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=${STARTUP_PREFIX}-${core[$i]}core.sh $option --image ${image[$i]}"
             gcloud compute instances create $instance_name --metadata-from-file startup-script="${STARTUP_PREFIX}-${core[$i]}core.sh" $option --image ${image[$i]}
@@ -513,7 +499,7 @@ while :;do
         # Check new instance in the pool
         try=0
         while :;do
-          if [ -n "$(condor_status |grep $instance_name)" ];then
+          if condor_status |grep -q "$instance_name" ;then
             date
             echo "$instance_name is added in the pool"
             echo
