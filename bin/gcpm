@@ -249,7 +249,9 @@ read_config () {
     echo "Set max or max_cores"
     exit 1
   fi
-  if [ "$max_cores" -eq 0 ];then
+  if [ "$max_cores" -eq 1 ];then
+    max=()
+  else
     if [ ${#core[@]} -gt ${#max[@]} ];then
       echo "core and max have different number of definitions"
       exit 1
