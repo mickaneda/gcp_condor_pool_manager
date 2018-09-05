@@ -24,6 +24,7 @@ bucket="" # e.g. gs://gcpm-condor (must be unique in entire GCP)
 admin="" # e.g. admin@example.com
 owner="" # e.g. CondorOwner
 log_level=INFO
+log_level_n=1
 
 PARAMS=(max max_cores prefix core mem image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level)
 PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level)
@@ -52,7 +53,7 @@ get_log_level () {
   else
     local level=$1
   fi
-  if ! ((level+1)) >& /dev/null;then
+  if [[ ! "$level" =~ ^[0-9]+$ ]];then
     local i=0
     while [[ $i -lt ${#LOGGER_LEVELS[@]} ]];do
       if [[ "$level" = "${LOGGER_LEVELS[$i]}" ]];then
@@ -81,7 +82,7 @@ logger () {
     print_cmd=">&2 printf"
   fi
   if test  -t $out;then
-    eval "$print_cmd \"\\e[${color}m[$(date '%Y/%m/%d %H:%M:%S')][$level] $msg\\e[m\\n\""
+    eval "$print_cmd \"\\e[${color}m[$(date +'%Y/%m/%d %H:%M:%S')][$level] $msg\\e[m\\n\""
   else
     eval "$print_cmd \"[$(date '%Y/%m/%d %H:%M:%S')][$level] $msg\\n\""
   fi
@@ -164,9 +165,9 @@ fi
 
 # Functions: Show setup
 show_setup () {
-  info "
+  notice "
 ================================================================================
-$(date): parameters updated
+Parameters were updated
 Configuration file: $CONFIG_FILE
 $(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)
 ================================================================================
@@ -191,7 +192,7 @@ check_var () {
 
   if [ $is_num -eq 1 ];then
     for v in ${var[@]};do
-      if ! ((n+1)) 2>&1;then
+      if [[ ! "$v" =~ ^[0-9]+$ ]];then
         err "must be number, $1 is not allowed for $name. Check your configuration file."
         exit 1
       fi
@@ -221,7 +222,7 @@ make_startup () {
   # Make startup script
 
   local i=0
-  for((i=0;i<${#core[@]};i++));do
+  for ((i=0;i<${#core[@]};i++));do
     cat << EOF > "${STARTUP_PREFIX}-${core[$i]}core.sh"
 #/bin/bash
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
@@ -357,7 +358,7 @@ read_config () {
 
   # make prefix for each core
   prefix_core=()
-  for((i=0;i<${#core[@]};i++));do
+  for ((i=0;i<${#core[@]};i++));do
     prefix_core[$i]=${prefix}-${core[$i]}core
   done
 
