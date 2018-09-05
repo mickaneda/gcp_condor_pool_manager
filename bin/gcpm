@@ -93,6 +93,11 @@ get_log_level () {
   echo $level
 }
 
+set_log_level () {
+  log_level="$1"
+  log_level_n=$(get_log_level "$log_level")
+}
+
 logger () {
   local level=$1
   shift
@@ -147,7 +152,7 @@ cmd_exec () {
 while getopts evhf:l:p: OPT;do
   case $OPT in
     "f" ) CONFIG_FILE=$OPTARG;;
-    "l" ) log_level=$OPTARG;;
+    "l" ) set_log_level "$OPTARG";;
     "p" )
       pool_password=$OPTARG
       if [ -z "$pool_password" ];then
@@ -324,7 +329,7 @@ read_config () {
         check_var owner "$var" 0 1
       elif [ "$name" = "log_level" ];then
         check_var log_level "$var" 0 1
-        log_level_n=$(get_log_level "$log_level")
+        set_log_level "$log_level"
       fi
     done < "$CONFIG_FILE"
   fi
