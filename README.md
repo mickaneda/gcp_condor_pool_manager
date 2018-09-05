@@ -8,7 +8,7 @@ Install bin/gcp_condor_pool_manager in any directory in PATH.
 
 Prepare ~/.config/gcp_condor_pool_manager/config like:
 
-    max 10,10
+    max_cores 20
     prefix gcp-wn
     core 1,8
     mem 3750,30000
