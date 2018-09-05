@@ -156,7 +156,7 @@ while getopts evhf:l:p: OPT;do
       fi
       ;;
     "e" ) edit=1;;
-    "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR";;
+    "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR"; exit;;
     "h" ) echo "$HELP"; exit;;
     * ) echo "Unknown arguments: $OPT"; echo; echo "HELP"; exit 1;;
   esac
