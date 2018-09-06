@@ -553,6 +553,10 @@ while :;do
   done < <(eval gcloud compute instances list $filter|grep "^$prefix")
 
   for((i=0;i<${#core[@]};i++));do
+    n_idle=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
+    if [ "$n_idle" -eq 0 ];then
+      continue
+    fi
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
     n_machines=$(echo "$machines"|wc -l)
     n_unclaimed=$(echo "$machines"|grep -c " Unclaimed")
