@@ -1,6 +1,6 @@
 # gcp_condor_pool_manager
 
-Manager of condor pool in GCP.
+HTCondor pool manager for Google Cloud Platform.
 
 ## Installation
 

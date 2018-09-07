@@ -61,7 +61,10 @@ edit=0
 
 # HELP
 HELP=$(cat << EOF
+HTCondor pool manager for Google Cloud Platform
+
 Usage: gcpm  [-eh] [-f <config file>] [-l <log level>] [-p <pool_password file>]
+
    -f  <config file>          Set config file
    -l  <log level>            Set log level (DEBUG, INFO (default), NOTICE, WARNING, ERROR)
    -p  <pool_password_file>   Pool file management
