@@ -118,7 +118,7 @@ get_log_color () {
 logger () {
   local level=$1
   shift
-  check_log_levl "$level" || return
+  check_log_level "$level" || return
   local color=$(get_log_color "$level")
   local msg="$*"
   out=1
