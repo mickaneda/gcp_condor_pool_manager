@@ -114,7 +114,7 @@ check_log_level () {
 get_log_color () {
   local level=$1
   local level_n=$(get_log_level "$level")
-  return "${LOGGER_COLORS[$level_n]}"
+  echo "${LOGGER_COLORS[$level_n]}"
 }
 
 logger () {
