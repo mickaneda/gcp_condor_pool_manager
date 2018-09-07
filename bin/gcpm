@@ -546,7 +546,7 @@ if ! type $gcloud >& /dev/null;then
   fi
 fi
 
-gcloud_auth_list=$(gcloud auth list)
+gcloud_auth_list=$(gcloud config list)
 echo "$gcloud_auth_list"
 if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
   err "Set account/project for gcloud"
