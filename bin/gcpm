@@ -200,26 +200,6 @@ if [ "$edit" -eq 1 ];then
   exit $?
 fi
 
-# Check gcloud utils
-if ! type $gcloud >& /dev/null;then
-  if [[ $system -eq 0 ]];then
-    message="gcloud tools are not installed, do you want to install?"
-    while : ;do
-      echo "$message [y/n]: " >/dev/tty
-      read -srn 1 ans </dev/tty
-      if [ "$ans" = "y" ];then
-        curl https://sdk.cloud.google.com | bash
-        break
-      elif [ "$ans" = "n" ];then
-        exit 1
-      fi
-    done
-  else
-    err "Intall gcloud: https://cloud.google.com/sdk/install"
-    exit 1
-  fi
-fi
-
 # Functions: Show setup
 show_setup () {
   notice "
@@ -455,6 +435,26 @@ read_config () {
 }
 
 read_config
+
+# Check gcloud utils
+if ! type $gcloud >& /dev/null;then
+  if [[ $system -eq 0 ]];then
+    message="gcloud tools are not installed, do you want to install?"
+    while : ;do
+      echo "$message [y/n]: " >/dev/tty
+      read -srn 1 ans </dev/tty
+      if [ "$ans" = "y" ];then
+        curl https://sdk.cloud.google.com | bash
+        break
+      elif [ "$ans" = "n" ];then
+        exit 1
+      fi
+    done
+  else
+    err "Intall gcloud: https://cloud.google.com/sdk/install"
+    exit 1
+  fi
+fi
 
 # pool_password management
 if [ -n "$pool_password" ];then
