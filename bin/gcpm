@@ -47,8 +47,8 @@ log_level=INFO
 log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
 
-PARAMS=(max max_cores prefix core mem image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level)
-PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level)
+PARAMS=(max max_cores prefix core mem image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
+PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level gcloud)
 
 # Config file
 config_dir="${HOME}/.config/gcp_condor_pool_manager"
@@ -368,6 +368,10 @@ read_config () {
       elif [ "$name" = "log_level" ];then
         check_var log_level "$var" 0 1
         set_log_level "$log_level"
+      elif [ "$name" = "gcloud" ];then
+        check_var gcloud "$var" 0 1
+      else
+        warn "$name is not valid parameter"
       fi
     done < "$config_file"
   fi
