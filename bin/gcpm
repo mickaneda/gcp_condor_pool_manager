@@ -132,7 +132,10 @@ logger () {
   shift
   check_log_level "$level" || return
   level=$(get_log_level_name "$level")
-  local msg="[$(date +'%Y/%m/%d %H:%M:%S')][$level] $*\\n"
+  local msg="[$level] $*\\n"
+  if [[ "$system" -eq 0 ]];then
+    msg="[$(date +'%Y/%m/%d %H:%M:%S')]$msg"
+  fi
   local out=1
   print_cmd="printf"
   if [[ $level = "ERROR" ]];then
@@ -181,12 +184,16 @@ cmd_exec () {
 
 # Functions: Show setup
 show_setup () {
+  local line="================================================================================"
+  if [[ system -eq 1 ];then
+    local line="========================================"
+  fi
   notice "
-========================================
+$line
 Parameters were updated
 Configuration file: $config_file
 $(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)
-========================================"
+$line"
 }
 
 # Functions: Read config function
@@ -491,8 +498,6 @@ clean_wns () {
 
 #### Start script ###
 
-info "Starting gcpm"
-
 # Check arguments
 while getopts esvhf:l:p: OPT;do
   case $OPT in
@@ -518,6 +523,12 @@ while getopts esvhf:l:p: OPT;do
     * ) echo "Unknown arguments: $OPT"; echo; echo "$HELP"; exit 1;;
   esac
 done
+
+if [[ "$system" -eq 1 ]];then
+  info "=============
+Starting gcpm
+============="
+fi
 
 # Read configuration file
 read_config
