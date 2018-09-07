@@ -133,9 +133,7 @@ logger () {
   check_log_level "$level" || return
   level=$(get_log_level_name "$level")
   local msg="[$level] $*\\n"
-  if [[ "$system" -eq 0 ]];then
-    msg="[$(date +'%Y/%m/%d %H:%M:%S')]$msg"
-  fi
+  [[ "$system" -eq 0 ]] && msg="[$(date +'%Y/%m/%d %H:%M:%S')]$msg"
   local out=1
   print_cmd="printf"
   if [[ $level = "ERROR" ]];then
@@ -185,9 +183,7 @@ cmd_exec () {
 # Functions: Show setup
 show_setup () {
   local line="================================================================================"
-  if [[ system -eq 1 ];then
-    local line="========================================"
-  fi
+  [[ "$system" -eq 1 ]] && line="========================================"
   notice "
 $line
 Parameters were updated
