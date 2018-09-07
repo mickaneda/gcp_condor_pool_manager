@@ -271,7 +271,7 @@ check_var () {
 make_startup () {
   # Make startup script
 
-  mkdir -P "$config_dir"
+  mkdir -p "$config_dir"
   local i=0
   for ((i=0;i<${#core[@]};i++));do
     cat << EOF > "${startup_prefix}-${core[$i]}core.sh"
@@ -485,7 +485,7 @@ update_wns () {
 
   # Check instance which is not running, but in condor_status (should be in the list until it is removed from the status)
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
-  mkdir -P "$config_dir"
+  mkdir -p "$config_dir"
   touch "$wn_list"
   for wn in "${in_status[@]}";do
     if ! echo " ${names[*]} "|grep -q " $wn ";then
