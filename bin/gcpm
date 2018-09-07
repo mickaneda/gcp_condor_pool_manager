@@ -27,10 +27,10 @@ GCPM_VERSION="v0.0.1"
 GCPM_DATE="05/Sep/2018"
 
 # Default parameters
-core=(1,8)
-mem=(3750,30000)
-max=(10,2)
-max_cores=30
+core=()
+mem=()
+max=()
+max_cores=0
 prefix="gcp-wn"
 image=()
 preemptible=1
@@ -98,18 +98,28 @@ get_log_level () {
 }
 
 set_log_level () {
-  log_level="$1"
+  log_level=$1
   log_level_n=$(get_log_level "$log_level")
+}
+
+check_log_level () {
+  local level=$1
+  local level_n=$(get_log_level "$level")
+  [[ "$level_n" -lt "$log_level_n" ]] && return 1
+  return 0
+}
+
+get_log_color () {
+  local level=$1
+  local level_n=$(get_log_level "$level")
+  return "${LOGGER_COLORS[$level_n]}"
 }
 
 logger () {
   local level=$1
   shift
-  local level_n=$(get_log_level "$level")
-  if [ "$level_n" -lt "$log_level_n" ];then
-    return
-  fi
-  local color=${LOGGER_COLORS[$level_n]}
+  check_log_levl "$level" || return
+  local color=$(get_log_color "$level")
   local msg="$*"
   out=1
   print_cmd="printf"
@@ -145,10 +155,15 @@ err () {
 }
 
 cmd_exec () {
-  info "$ $*"
-  if [ "$log_level_n" -lt 2 ];then
-    out=">/dev/null"
+  if [[ $# -eq 1 ]];then
+    level=1
+  else
+    level=$(get_log_level "$1")
+    shift
   fi
+  logger "$level" "$ $*"
+  local out=""
+  check_log_level "$level" || out=">/dev/null"
   eval "$* $out"
 }
 
@@ -495,10 +510,8 @@ update_wns () {
   done
 
   # Update config for collector
-  #date
-  #echo $ condor_config_val -collector -set "WNS = $wns"
-  condor_config_val -collector -set "WNS = $wns" >/dev/null #echo $condor_reconfig -collector
-  condor_reconfig -collector >/dev/null
+  cmd_exec DEBUG "condor_config_val -collector -set \"WNS = $wns\""
+  cmd_exec DEBUG "condor_reconfig -collector"
 }
 
 update_wns
@@ -597,7 +610,6 @@ while :;do
             if [[ ! -f "$startup" ]];then
               make_startup
             fi
-            echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=${startup} $option --image ${image[$i]}"
             cmd_exec "gcloud compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $option --image ${image[$i]}"
             break
           fi
