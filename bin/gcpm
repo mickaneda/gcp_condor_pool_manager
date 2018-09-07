@@ -62,8 +62,7 @@ pool_password=""
 edit=0
 
 # HELP
-HELP=$(cat << EOF
-HTCondor pool manager for Google Cloud Platform
+HELP="HTCondor pool manager for Google Cloud Platform
 
 Usage: gcpm  [-esvh] [-f <config file>] [-l <log level>] [-p <pool_password file>]
 
@@ -73,13 +72,12 @@ Usage: gcpm  [-esvh] [-f <config file>] [-l <log level>] [-p <pool_password file
    -e                         Edit config file
    -s                         Start system process
    -v                         Show version
-   -h                         print this help
-EOF
-)
+   -h                         print this help"
 
 # Logger
 LOGGER_LEVELS=("DEBUG" "INFO" "NOTICE" "WARNING" "ERROR")
 LOGGER_COLORS=(3 "" 36 33 31)
+
 get_log_level () {
   if [ $# -eq 0 ];then
     local level=1
@@ -180,37 +178,6 @@ cmd_exec () {
   check_log_level "$level" || out=">/dev/null"
   eval "$* $out"
 }
-
-# Check arguments
-while getopts esvhf:l:p: OPT;do
-  case $OPT in
-    "f" ) config_file=$OPTARG;;
-    "l" ) set_log_level "$OPTARG";;
-    "p" )
-      pool_password=$OPTARG
-      if [ -z "$pool_password" ];then
-        err "pool_password file is empty"
-        exit 1
-      fi
-      ;;
-    "e" ) edit=1;;
-    "s" )
-      system=1
-      config_dir="/var/cache/gcpm"
-      config_file="/etc/gcpm.conf"
-      wn_list="/var/cache/gcpm/wn_list"
-      startup_prefix="/var/cache/gcpm/startup"
-      ;;
-    "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR"; exit;;
-    "h" ) echo "$HELP"; exit;;
-    * ) echo "Unknown arguments: $OPT"; echo; echo "$HELP"; exit 1;;
-  esac
-done
-
-if [ "$edit" -eq 1 ];then
-  ${EDITOR:-vi} "$config_file"
-  exit $?
-fi
 
 # Functions: Show setup
 show_setup () {
@@ -406,8 +373,6 @@ read_config () {
     head=$(hostname -i)
   elif [ "$head_info" = "gcp" ];then
     head=${HOSTNAME}
-    #instances=($($gcloud compute instances list |grep "^$HOSTNAME "))
-    #head=${instances[((${#instances[@]}-2))]}
   else
     head=$head_info
   fi
@@ -444,44 +409,6 @@ read_config () {
     option="${option} --tags=$tag"
   fi
 }
-
-read_config
-
-# Check gcloud utils
-if ! type $gcloud >& /dev/null;then
-  if [[ $system -eq 0 ]];then
-    message="gcloud tools are not installed, do you want to install?"
-    while : ;do
-      echo "$message [y/n]: " >/dev/tty
-      read -srn 1 ans </dev/tty
-      if [ "$ans" = "y" ];then
-        curl https://sdk.cloud.google.com | bash
-        break
-      elif [ "$ans" = "n" ];then
-        exit 1
-      fi
-    done
-  else
-    err "Intall gcloud: https://cloud.google.com/sdk/install"
-    exit 1
-  fi
-fi
-
-# pool_password management
-if [ -n "$pool_password" ];then
-  if ! gsutil ls | grep "${bucket}$" >/dev/null;then
-    z=${zone#*=}
-    z=${z%-*}
-    cmd_exec "sutil mb -c coldline -l $z $bucket"
-    ret=$?
-    if [ $ret -ne 0 ];then
-      exit $ret
-    fi
-  fi
-  cmd_exec "gsutil cp $pool_password ${bucket}"
-  ret=$?
-  exit $ret
-fi
 
 # Functions: Update worker node information
 update_wns () {
@@ -544,8 +471,6 @@ update_wns () {
   cmd_exec DEBUG "condor_reconfig -collector"
 }
 
-update_wns
-
 # Functions: Clean up worker nodes
 clean_wns () {
   # Delete instances not in condor_status, which were removed by condor_off
@@ -564,13 +489,94 @@ clean_wns () {
   fi
 }
 
-# Main loop
-first=1
-while :;do
-  if [ $first -eq 0 ];then
-    read_config
+#### Start script ###
+
+# Check arguments
+while getopts esvhf:l:p: OPT;do
+  case $OPT in
+    "f" ) config_file=$OPTARG;;
+    "l" ) set_log_level "$OPTARG";;
+    "p" )
+      pool_password=$OPTARG
+      if [ -z "$pool_password" ];then
+        err "pool_password file is empty"
+        exit 1
+      fi
+      ;;
+    "e" ) edit=1;;
+    "s" )
+      system=1
+      config_dir="/var/cache/gcpm"
+      config_file="/etc/gcpm.conf"
+      wn_list="/var/cache/gcpm/wn_list"
+      startup_prefix="/var/cache/gcpm/startup"
+      ;;
+    "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR"; exit;;
+    "h" ) echo "$HELP"; exit;;
+    * ) echo "Unknown arguments: $OPT"; echo; echo "$HELP"; exit 1;;
+  esac
+done
+
+# Read configuration file
+read_config
+
+# Edit
+if [ "$edit" -eq 1 ];then
+  ${EDITOR:-vi} "$config_file"
+  exit $?
+fi
+
+# Check gcloud utils
+if ! type $gcloud >& /dev/null;then
+  if [[ $system -eq 0 ]];then
+    message="gcloud tools are not installed, do you want to install?"
+    while : ;do
+      echo "$message [y/n]: " >/dev/tty
+      read -srn 1 ans </dev/tty
+      if [ "$ans" = "y" ];then
+        curl https://sdk.cloud.google.com | bash
+        break
+      elif [ "$ans" = "n" ];then
+        exit 1
+      fi
+    done
+  else
+    err "Intall gcloud: https://cloud.google.com/sdk/install"
+    exit 1
   fi
-  first=0
+fi
+
+gcloud_auth_list=$(gcloud auth list)
+echo "$gcloud_auth_list"
+if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
+  err "Set account/project for gcloud"
+  exit 1
+fi
+
+
+# pool_password management
+if [ -n "$pool_password" ];then
+  if ! gsutil ls | grep "${bucket}$" >/dev/null;then
+    z=${zone#*=}
+    z=${z%-*}
+    cmd_exec "sutil mb -c coldline -l $z $bucket"
+    ret=$?
+    if [ $ret -ne 0 ];then
+      exit $ret
+    fi
+  fi
+  cmd_exec "gsutil cp $pool_password ${bucket}"
+  ret=$?
+  exit $ret
+fi
+
+# Update worker nodes at first
+update_wns
+
+# Main loop
+while :;do
+  # Update configuration
+  read_config
 
   # Cleanup worker nodes
   clean_wns
