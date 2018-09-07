@@ -26,34 +26,34 @@ GCPM_AUTHOR="Michiru Kaneda"
 GCPM_VERSION="v0.0.1"
 GCPM_DATE="05/Sep/2018"
 
-# Config file
-CONFIG_DIR="${HOME}/.config/gcp_condor_pool_manager"
-CONFIG_FILE="${CONFIG_DIR}/config"
-WN_LIST="${CONFIG_DIR}/wn_list"
-STARTUP_PREFIX="${CONFIG_DIR}/startup"
-
 # Default parameters
-max=(10)
-max_cores=0 # Set non-zero if you want to limit in total number of cores in addition to max for each
-prefix="gcep-wn"
-core=(1)
-mem=(3750)
+core=(1,8)
+mem=(3750,30000)
+max=(10,2)
+max_cores=30
+prefix="gcp-wn"
 image=()
-preemptible=0
+preemptible=1
 off_timer=0
-zones="" # e.g. asia-northeast1-b
-tag="" # e.g. allow-head
-reuse=0 
+zones=""
+tag=""
+reuse=0
 interval=10
 head_info=gcp
-bucket="" # e.g. gs://gcpm-condor (must be unique in entire GCP)
-admin="" # e.g. admin@example.com
-owner="" # e.g. CondorOwner
+bucket=""
+admin=""
+owner=""
 log_level=INFO
 log_level_n=1
 
 PARAMS=(max max_cores prefix core mem image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level)
 PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level)
+
+# Config file
+config_dir="${HOME}/.config/gcp_condor_pool_manager"
+config_file="${config_dir}/config"
+wn_list="${config_dir}/wn_list"
+startup_prefix="${config_dir}/startup"
 
 # Other variables
 pool_password=""
@@ -63,12 +63,13 @@ edit=0
 HELP=$(cat << EOF
 HTCondor pool manager for Google Cloud Platform
 
-Usage: gcpm  [-eh] [-f <config file>] [-l <log level>] [-p <pool_password file>]
+Usage: gcpm  [-esvh] [-f <config file>] [-l <log level>] [-p <pool_password file>]
 
    -f  <config file>          Set config file
    -l  <log level>            Set log level (DEBUG, INFO (default), NOTICE, WARNING, ERROR)
    -p  <pool_password_file>   Pool file management
    -e                         Edit config file
+   -s                         Start system process
    -v                         Show version
    -h                         print this help
 EOF
@@ -154,7 +155,7 @@ cmd_exec () {
 # Check arguments
 while getopts evhf:l:p: OPT;do
   case $OPT in
-    "f" ) CONFIG_FILE=$OPTARG;;
+    "f" ) config_file=$OPTARG;;
     "l" ) set_log_level "$OPTARG";;
     "p" )
       pool_password=$OPTARG
@@ -164,6 +165,12 @@ while getopts evhf:l:p: OPT;do
       fi
       ;;
     "e" ) edit=1;;
+    "s" )
+      config_dir="/var/cache/gcpm"
+      config_file="/etc/gcpm.conf"
+      wn_list="/var/cache/gcpm/wn_list"
+      startup_prefix="/var/cache/gcpm/startup"
+      ;;
     "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR"; exit;;
     "h" ) echo "$HELP"; exit;;
     * ) echo "Unknown arguments: $OPT"; echo; echo "$HELP"; exit 1;;
@@ -171,7 +178,7 @@ while getopts evhf:l:p: OPT;do
 done
 
 if [ "$edit" -eq 1 ];then
-  ${EDITOR:-vi} "$CONFIG_FILE"
+  ${EDITOR:-vi} "$config_file"
   exit $?
 fi
 
@@ -196,7 +203,7 @@ show_setup () {
   notice "
 ================================================================================
 Parameters were updated
-Configuration file: $CONFIG_FILE
+Configuration file: $config_file
 $(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)
 ================================================================================
 "
@@ -237,7 +244,7 @@ check_var () {
   fi
 
   if [ "$array" -eq 1 ];then
-    eval "$name=(${var[@]})"
+    eval "$name=(${var[*]})"
   else
     eval "$name=${var[0]}"
   fi
@@ -249,9 +256,10 @@ check_var () {
 make_startup () {
   # Make startup script
 
+  mkdir -P "$config_dir"
   local i=0
   for ((i=0;i<${#core[@]};i++));do
-    cat << EOF > "${STARTUP_PREFIX}-${core[$i]}core.sh"
+    cat << EOF > "${startup_prefix}-${core[$i]}core.sh"
 #/bin/bash
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
@@ -279,7 +287,7 @@ done
 date > /root/condor_started
 EOF
     if [ $off_timer -ne 0 ];then
-      cat << EOF >> "${STARTUP_PREFIX}-${core[$i]}core.sh"
+      cat << EOF >> "${startup_prefix}-${core[$i]}core.sh"
 sleep $off_timer
 condor_off -peaceful -startd
 date > /root/condor_off
@@ -289,14 +297,19 @@ EOF
 }
 
 read_config () {
-  if [ ! -f "$CONFIG_FILE" ];then
-    err "Configuration file:$CONFIG_FILE doesn't exist"
+  if [ ! -f "$config_file" ];then
+    err "Configuration file:$config_file doesn't exist"
     exit 1
   else
     is_updated=0
-    local name
-    local var
-    while read -r name var;do
+    local line
+    while read -r line;do
+      line=(${line%%#*})
+      local name=${line[0]}
+      if [[ -z "$name" ]];then
+        continue
+      fi
+      local var=${line[1]}
       if [ "$name" = "max" ];then
         check_var max "$var" 1 1 1
       elif [ "$name" = "max_cores" ];then
@@ -334,14 +347,14 @@ read_config () {
         check_var log_level "$var" 0 1
         set_log_level "$log_level"
       fi
-    done < "$CONFIG_FILE"
+    done < "$config_file"
   fi
 
   # No reuse for non zero off timer nodes
   if [ $off_timer -ne 0 ];then
     reuse=0
   fi
- 
+
   # check variables
   for v in "${PARAMS_NO_EMPTY[@]}";do
     if [ -z "$(eval "echo \$$v")" ];then
@@ -457,15 +470,16 @@ update_wns () {
 
   # Check instance which is not running, but in condor_status (should be in the list until it is removed from the status)
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
-  touch "$WN_LIST"
+  mkdir -P "$config_dir"
+  touch "$wn_list"
   for wn in "${in_status[@]}";do
     if ! echo " ${names[*]} "|grep -q " $wn ";then
-      ip=$(grep "$wn" "$WN_LIST"|cut -d" " -f2)
+      ip=$(grep "$wn" "$wn_list"|cut -d" " -f2)
       if [ -n "$ip" ];then
         names=("${names[@]}" "${wn}")
         ips=("${ips[@]}" "${ip}")
       else
-        warn "$wn is listed in the status, but not listed in $WN_LIST nor gcp pool"
+        warn "$wn is listed in the status, but not listed in $wn_list nor gcp pool"
       fi
     fi
   done
@@ -473,10 +487,10 @@ update_wns () {
   # Make wn list
   n=0
   wns=""
-  : > "$WN_LIST"
+  : > "$wn_list"
   while [ $n -lt ${#names[@]} ];do
     wns="$wns condor@\$(UID_DOMAIN)/${ips[$n]} condor_pool@\$(UID_DOMAIN)/${ips[$n]}"
-    echo "${names[$n]} ${ips[$n]}" >> "$WN_LIST"
+    echo "${names[$n]} ${ips[$n]}" >> "$wn_list"
     ((n++))
   done
 
@@ -579,8 +593,12 @@ while :;do
         while [ $n -lt 10000 ];do
           instance_name=${prefix_core[$i]}-$(printf "%04d" $n)
           if ! echo "${all[*]}"|grep -q "$instance_name";then
-            echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=${STARTUP_PREFIX}-${core[$i]}core.sh $option --image ${image[$i]}"
-            cmd_exec "gcloud compute instances create $instance_name --metadata-from-file startup-script=\"${STARTUP_PREFIX}-${core[$i]}core.sh\" $option --image ${image[$i]}"
+            startup="${startup_prefix}-${core[$i]}core.sh"
+            if [[ ! -f "$startup" ]];then
+              make_startup
+            fi
+            echo "$ gcloud compute instances create $instance_name --metadata-from-file startup-script=${startup} $option --image ${image[$i]}"
+            cmd_exec "gcloud compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $option --image ${image[$i]}"
             break
           fi
           instance_name=""

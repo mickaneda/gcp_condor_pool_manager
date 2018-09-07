@@ -1,0 +1,18 @@
+core      1,8         # Number of cores    (comma separated array)
+max       10,2         # Max for each cores (comma separated array)
+max_cores 30       # Set non-zero if you want to limit in total number of cores in addition to max for each (e.g. 1 x N + 8 x M < 30)
+prefix    gcp-wn  # Instance name prefix. Instance name will be like "gcp-wn-1core-0001"
+mem       3750,30000
+image ()
+preemptible 0
+off_timer 0
+zones "" # e.g. asia-northeast1-b
+tag "" # e.g. allow-head
+reuse 0
+interval 10
+head_info gcp
+bucket "" # e.g. gs://gcpm-condor (must be unique in entire GCP)
+admin "" # e.g. admin@example.com
+owner "" # e.g. CondorOwner
+log_level INFO
+log_level_n 1
