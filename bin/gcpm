@@ -136,7 +136,7 @@ logger () {
   local color=$(get_log_color "$level")
   level=$(get_log_level_name "$level")
   local msg="$*"
-  out=1
+  local out=1
   print_cmd="printf"
   if [[ $level = "ERROR" ]];then
     out=2
@@ -220,8 +220,7 @@ show_setup () {
 Parameters were updated
 Configuration file: $config_file
 $(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)
-================================================================================
-"
+================================================================================"
 }
 
 # Functions: Read config function
@@ -538,11 +537,11 @@ update_wns () {
   # Update config for collector
   local out=""
   if check_log_level DEBUG;then
-    debug "condor_config_val -collector -set 'WNS = ${wns//\$/\\}'"
+    debug "$ condor_config_val -collector -set 'WNS = ${wns//\$/\\\$}'"
   else
     out=">/dev/null"
   fi
-  condor_config_val -collector -set "WNS = $wns" $out
+  eval "condor_config_val -collector -set 'WNS = $wns' $out"
   cmd_exec DEBUG "condor_reconfig -collector"
 }
 
