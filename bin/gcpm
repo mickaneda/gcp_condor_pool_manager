@@ -488,18 +488,19 @@ fi
 # Functions: Update worker node information
 update_wns () {
   # update condor configuration for worker nodes
-  names=()
-  ips=()
+  local names=()
+  local ips=()
 
   # Get running instances
+  local line
   while read -r line;do
-    instance=($line)
-    name=${instance[0]}
-    state=${instance[((${#instance[@]}-1))]}
+    local instance=($line)
+    local name=${instance[0]}
+    local state=${instance[((${#instance[@]}-1))]}
     if [ "$head_info" = "gcp" ];then
-      ip=${instance[((${#instance[@]}-3))]}
+      local ip=${instance[((${#instance[@]}-3))]}
     else
-      ip=${instance[((${#instance[@]}-2))]}
+      local ip=${instance[((${#instance[@]}-2))]}
     fi
     if [ "$state" == "RUNNING" ];then
       names=("${names[@]}" "${name}")
@@ -511,9 +512,10 @@ update_wns () {
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
   mkdir -p "$config_dir"
   touch "$wn_list"
+  local wn
   for wn in "${in_status[@]}";do
     if ! echo " ${names[*]} "|grep -q " $wn ";then
-      ip=$(grep "$wn" "$wn_list"|cut -d" " -f2)
+      local ip=$(grep "$wn" "$wn_list"|cut -d" " -f2)
       if [ -n "$ip" ];then
         names=("${names[@]}" "${wn}")
         ips=("${ips[@]}" "${ip}")
@@ -524,8 +526,8 @@ update_wns () {
   done
 
   # Make wn list
-  n=0
-  wns=""
+  local n=0
+  local wns=""
   : > "$wn_list"
   while [ $n -lt ${#names[@]} ];do
     wns="$wns condor@\$(UID_DOMAIN)/${ips[$n]} condor_pool@\$(UID_DOMAIN)/${ips[$n]}"
@@ -534,7 +536,13 @@ update_wns () {
   done
 
   # Update config for collector
-  cmd_exec DEBUG "condor_config_val -collector -set 'WNS = \$wns'"
+  local out=""
+  if check_log_level DEBUG;then
+    debug "condor_config_val -collector -set 'WNS = ${wns//\$/\\}'"
+  else
+    out=">/dev/null"
+  fi
+  condor_config_val -collector -set "WNS = $wns" $out
   cmd_exec DEBUG "condor_reconfig -collector"
 }
 
