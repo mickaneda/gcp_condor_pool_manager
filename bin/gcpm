@@ -99,6 +99,18 @@ get_log_level () {
   echo $level
 }
 
+get_log_level_name () {
+  if [ $# -eq 0 ];then
+    local level=INFO
+  else
+    local level=$1
+  fi
+  if [[ "$level" =~ ^[0-9]+$ ]];then
+    level=${LOGGER_LEVELS[$level]}
+  fi
+  echo "$level"
+}
+
 set_log_level () {
   log_level=$1
   log_level_n=$(get_log_level "$log_level")
@@ -122,6 +134,7 @@ logger () {
   shift
   check_log_level "$level" || return
   local color=$(get_log_color "$level")
+  level=$(get_log_level_name "$level")
   local msg="$*"
   out=1
   print_cmd="printf"
