@@ -14,6 +14,6 @@ gcloud=($(grep "^gcloud " /etc/gcpm.conf 2>/dev/null))
 gcloud=${gcloud[1]:-/root/google-cloud-sdk/bin/gcloud}
 if ! type "$gcloud" >/dev/null 2>&1;then
   echo "gcloud tool is not installed or not in $gcloud"
-  echo "Please install gcloud and/or set path in your configuration file as 'gcloud=/path/to/gcloud'"
+  echo "Please install gcloud and/or set path in your configuration file as 'gcloud /path/to/gcloud'"
   echo "Ref: https://cloud.google.com/sdk/install"
 fi
