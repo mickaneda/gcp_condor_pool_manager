@@ -170,7 +170,7 @@ cmd_exec () {
 }
 
 # Check arguments
-while getopts evhf:l:p: OPT;do
+while getopts esvhf:l:p: OPT;do
   case $OPT in
     "f" ) config_file=$OPTARG;;
     "l" ) set_log_level "$OPTARG";;
@@ -202,7 +202,7 @@ fi
 
 # Check gcloud utils
 if ! type $gcloud >& /dev/null;then
-  if [[ $sytem -eq 0 ]];then
+  if [[ $system -eq 0 ]];then
     message="gcloud tools are not installed, do you want to install?"
     while : ;do
       echo "$message [y/n]: " >/dev/tty
