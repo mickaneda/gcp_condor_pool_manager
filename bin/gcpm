@@ -534,7 +534,7 @@ update_wns () {
   done
 
   # Update config for collector
-  cmd_exec DEBUG "condor_config_val -collector -set \"WNS = $wns\""
+  cmd_exec DEBUG "condor_config_val -collector -set 'WNS = \$wns'"
   cmd_exec DEBUG "condor_reconfig -collector"
 }
 
