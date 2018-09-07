@@ -10,7 +10,7 @@ cp system/gcpm.service /etc/systemd/system/
 echo "/etc/systemd/system/gcpm.service was installed"
 echo
 
-gcloud=($(grep "^gcloud " /etc/gcpm/conf))
+gcloud=($(grep "^gcloud " /etc/gcpm.conf 2>/dev/null))
 gcloud=${gcloud[1]:-/root/google-cloud-sdk/bin/gcloud}
 if type "$gcloud" >/dev/null 2>&1;then
   echo "gcloud tool is not installed or not in $gcloud"
