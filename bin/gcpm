@@ -182,11 +182,11 @@ cmd_exec () {
 # Functions: Show setup
 show_setup () {
   notice "
-================================================================================
+========================================
 Parameters were updated
 Configuration file: $config_file
 $(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)
-================================================================================"
+========================================"
 }
 
 # Functions: Read config function
@@ -491,6 +491,8 @@ clean_wns () {
 
 #### Start script ###
 
+info "Starting gcpm"
+
 # Check arguments
 while getopts esvhf:l:p: OPT;do
   case $OPT in
@@ -546,7 +548,7 @@ if ! type $gcloud >& /dev/null;then
   fi
 fi
 
-gcloud_auth_list=$(gcloud config list)
+gcloud_auth_list=$($gcloud config list)
 echo "$gcloud_auth_list"
 if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
   err "Set account/project for gcloud"

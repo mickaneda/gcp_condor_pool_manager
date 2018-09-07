@@ -2,11 +2,12 @@
 Description = HTCondor pool manager for Google Cloud Platform
 
 [Service]
-ExecStart = /usr/bin/gcpm -s > /var/log/gcpm.log 2>&1
+ExecStart = /usr/bin/gcpm -s
 ExecStop = /usr/bin/kill -p $MAINPID
 Restart = always
-Type = simple
-PIDFile = /var/run/gcpm/gcpm.pid
+StandardOutput = syslog
+StandardError = syslog
+SyslogIdentifier = gcpm
 
 [Install]
 WantedBy = multi-user.target

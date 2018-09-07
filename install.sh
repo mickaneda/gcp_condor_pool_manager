@@ -6,8 +6,13 @@ if [ ! -f /etc/gcpm.conf ];then
   cp etc/gcpm.conf /etc/
   echo "/etc/gcpm.conf was installed"
 fi
-cp system/gcpm.service /etc/systemd/system/
+cp etc/systemd/system/gcpm.service /etc/systemd/system/
 echo "/etc/systemd/system/gcpm.service was installed"
+cp etc/rsyslog.d/gcpm.conf /etc/rsyslog.d/
+systemctl daemon-reload
+echo "/etc/rsyslog/gcpm.conf was installed"
+systemctl restart rsyslog
+mkdir -p /var/run/gcpm
 echo
 
 gcloud=($(grep "^gcloud " /etc/gcpm.conf 2>/dev/null))
