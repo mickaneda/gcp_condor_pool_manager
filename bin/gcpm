@@ -133,9 +133,8 @@ logger () {
   local level=$1
   shift
   check_log_level "$level" || return
-  local color=$(get_log_color "$level")
   level=$(get_log_level_name "$level")
-  local msg="$*"
+  local msg="[$(date +'%Y/%m/%d %H:%M:%S')][$level] $*\\n"
   local out=1
   print_cmd="printf"
   if [[ $level = "ERROR" ]];then
@@ -143,10 +142,10 @@ logger () {
     print_cmd=">&2 printf"
   fi
   if test  -t $out;then
-    eval "$print_cmd \"\\e[${color}m[$(date +'%Y/%m/%d %H:%M:%S')][$level] $msg\\e[m\\n\""
-  else
-    eval "$print_cmd \"[$(date '%Y/%m/%d %H:%M:%S')][$level] $msg\\n\""
+    local color=$(get_log_color "$level")
+    msg="\\e[${color}m${msg}\\e[m"
   fi
+  eval "$print_cmd \"$msg\""
 }
 
 debug () {
