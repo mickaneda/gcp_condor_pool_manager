@@ -136,15 +136,16 @@ logger () {
   local msg="[$level]"
   [[ "$system" -eq 0 ]] && msg="[$(date +'%Y/%m/%d %H:%M:%S')]$msg"
   if [[ "$logger_line" -eq 1 ]];then
-    if [[ "$system" -eq 0 ]];then
+    if [[ "$system" -eq 1 ]];then
       local width1=$((40-${#msg}))
-      local width2=${#msg}
+      local width2=40
     else
       local width1=$((80-${#msg}))
-      local width2=${#msg}
+      local width2=80
     fi
-    local linepre=$(printf "=%.s" {1..$width1})
-    local linepost=$(printf "=%.s" {1..$width2})
+    echo $width1 $width2
+    local linepre=$(eval "printf =%.s {1..$width1}")
+    local linepost=$(eval "printf =%.s {1..$width2}")
     msg="${msg}${linepre}\\n$*\\n${linepost}\\n"
   else
     msg="${msg}$*\\n"
@@ -199,12 +200,9 @@ cmd_exec () {
 # Functions: Show setup
 show_setup () {
   logger_line=1
-  notice "
-$line
-Parameters were updated
+  notice "Parameters were updated
 Configuration file: $config_file
-$(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)
-$line"
+$(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)"
 }
 
 # Functions: Read config function
@@ -537,7 +535,7 @@ done
 
 if [[ "$system" -eq 1 ]];then
   logger_line=1
-  info "Starting gcpm"
+  notice "Starting gcpm"
 fi
 
 # Read configuration file
@@ -569,8 +567,8 @@ if ! type $gcloud >& /dev/null;then
   fi
 fi
 
-gcloud_auth_list=$($gcloud config list)
-echo "$gcloud_auth_list"
+gcloud_auth_list=$($gcloud config list 2>&1)
+notice "$gcloud_auth_list"
 if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
   err "Set account/project for gcloud"
   exit 1
