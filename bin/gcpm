@@ -57,9 +57,10 @@ wn_list="${config_dir}/wn_list"
 startup_prefix="${config_dir}/startup"
 
 # Other variables
-system=0
 pool_password=""
 edit=0
+system=0
+logger_line=0
 
 # HELP
 HELP="HTCondor pool manager for Google Cloud Platform
@@ -132,8 +133,22 @@ logger () {
   shift
   check_log_level "$level" || return
   level=$(get_log_level_name "$level")
-  local msg="[$level] $*\\n"
+  local msg="[$level]"
   [[ "$system" -eq 0 ]] && msg="[$(date +'%Y/%m/%d %H:%M:%S')]$msg"
+  if [[ "$logger_line" -eq 1 ]];then
+    if [[ "$system" -eq 0 ]];then
+      local width1=$((40-${#msg}))
+      local width2=${#msg}
+    else
+      local width1=$((80-${#msg}))
+      local width2=${#msg}
+    fi
+    local linepre=$(printf "=%.s" {1..$width1})
+    local linepost=$(printf "=%.s" {1..$width2})
+    msg="${msg}${linepre}\\n$*\\n${linepost}\\n"
+  else
+    msg="${msg}$*\\n"
+  fi
   local out=1
   print_cmd="printf"
   if [[ $level = "ERROR" ]];then
@@ -145,6 +160,7 @@ logger () {
     msg="\\e[${color}m${msg}\\e[m"
   fi
   eval "$print_cmd \"$msg\""
+  logger_line=0
 }
 
 debug () {
@@ -182,8 +198,7 @@ cmd_exec () {
 
 # Functions: Show setup
 show_setup () {
-  local line="================================================================================"
-  [[ "$system" -eq 1 ]] && line="========================================"
+  logger_line=1
   notice "
 $line
 Parameters were updated
@@ -521,9 +536,8 @@ while getopts esvhf:l:p: OPT;do
 done
 
 if [[ "$system" -eq 1 ]];then
-  info "=============
-Starting gcpm
-============="
+  logger_line=1
+  info "Starting gcpm"
 fi
 
 # Read configuration file
