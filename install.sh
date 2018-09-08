@@ -2,8 +2,8 @@
 
 cp bin/gcpm /usr/bin/
 echo "/usr/bin/gcpm was installed"
-cp etc/systemd/system/gcpm.service /etc/systemd/system/
-echo "/etc/systemd/system/gcpm.service was installed"
+cp usr/lib/systemd/system/gcpm.service /usr/lib/systemd/system/
+echo "/usr/lib/systemd/system/gcpm.service was installed"
 cp etc/rsyslog.d/gcpm.conf /etc/rsyslog.d/
 systemctl daemon-reload
 echo "/etc/rsyslog/gcpm.conf was installed"
