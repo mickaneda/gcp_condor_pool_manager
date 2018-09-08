@@ -143,7 +143,6 @@ logger () {
       local width1=$((80-${#msg}))
       local width2=80
     fi
-    echo $width1 $width2
     local linepre=$(eval "printf =%.s {1..$width1}")
     local linepost=$(eval "printf =%.s {1..$width2}")
     msg="${msg}${linepre}\\n$*\\n${linepost}\\n"
@@ -220,6 +219,10 @@ check_var () {
   if [ "${var[*]}" = "$(eval "echo \${$name[*]}")" ];then
     return 0
   fi
+  echo =======
+  echo $name
+  echo "${var[*]}"
+  echo "$(eval "echo \${$name[*]}")"
 
   if [ "$is_num" -eq 1 ];then
     for v in "${var[@]}";do
@@ -330,7 +333,7 @@ read_config () {
       elif [ "$name" = "reuse" ];then
         check_var reuse "$var" 1 1
       elif [ "$name" = "interval" ];then
-        check_var name "$var" 1 1
+        check_var interval "$var" 1 1
       elif [ "$name" = "head_info" ];then
         check_var head_info "$var" 0 1
       elif [ "$name" = "bucket" ];then
@@ -567,7 +570,7 @@ if ! type $gcloud >& /dev/null;then
   fi
 fi
 
-gcloud_auth_list=$($gcloud config list 2>&1)
+gcloud_auth_list=$(echo && $gcloud config list 2>&1)
 notice "$gcloud_auth_list"
 if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
   err "Set account/project for gcloud"
