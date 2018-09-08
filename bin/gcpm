@@ -130,12 +130,14 @@ get_log_color () {
 
 logger () {
   local level=$1
+  local line=$logger_line
+  logger_line=0
   shift
   check_log_level "$level" || return
   level=$(get_log_level_name "$level")
   local msg="[$level]"
   [[ "$system" -eq 0 ]] && msg="[$(date +'%Y/%m/%d %H:%M:%S')]$msg"
-  if [[ "$logger_line" -eq 1 ]];then
+  if [[ "$line" -eq 1 ]];then
     if [[ "$system" -eq 1 ]];then
       local width1=$((40-${#msg}))
       local width2=40
@@ -160,7 +162,6 @@ logger () {
     msg="\\e[${color}m${msg}\\e[m"
   fi
   eval "$print_cmd \"$msg\""
-  logger_line=0
 }
 
 debug () {
@@ -219,10 +220,6 @@ check_var () {
   if [ "${var[*]}" = "$(eval "echo \${$name[*]}")" ];then
     return 0
   fi
-  echo =======
-  echo $name
-  echo "${var[*]}"
-  echo "$(eval "echo \${$name[*]}")"
 
   if [ "$is_num" -eq 1 ];then
     for v in "${var[@]}";do
