@@ -12,8 +12,8 @@ cp etc/rsyslog.d/gcpm.conf /etc/rsyslog.d/
 systemctl daemon-reload
 echo "/etc/rsyslog/gcpm.conf was installed"
 systemctl restart rsyslog
-mkdir -p /var/run/gcpm
-echo
+cp etc/logrotate.d/gcpm.conf /etc/logrotate.d/
+echo "/etc/logrotate.d/gcpm.conf was installed"
 
 gcloud=($(grep "^gcloud " /etc/gcpm.conf 2>/dev/null))
 gcloud=${gcloud[1]:-/root/google-cloud-sdk/bin/gcloud}
