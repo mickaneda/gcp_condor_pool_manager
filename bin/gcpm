@@ -29,6 +29,7 @@ GCPM_DATE="05/Sep/2018"
 # Default parameters
 core=()
 mem=()
+disk=()
 max=()
 max_cores=0
 prefix="gcp-wn"
@@ -47,7 +48,7 @@ log_level=INFO
 log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
 
-PARAMS=(max max_cores prefix core mem image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
+PARAMS=(max max_cores prefix core mem disk image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
 PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level gcloud)
 
 # Config file
@@ -316,6 +317,8 @@ read_config () {
         check_var core "$var" 1 1 1
       elif [ "$name" = "mem" ];then
         check_var mem "$var" 1 1 1
+      elif [ "$name" = "disk" ];then
+        check_var disk "$var" 0 1 1
       elif [ "$name" = "image" ];then
         check_var image "$var" 0 1 1
       elif [ "$name" = "preemptible" ];then
@@ -371,10 +374,6 @@ read_config () {
     err "core and memory have different number of definitions"
     exit 1
   fi
-  if [ ${#core[@]} -gt ${#image[@]} ];then
-    err "core and image have different number of definitions"
-    exit 1
-  fi
 
   if [ $is_updated -eq 1 ];then
     show_setup
@@ -410,9 +409,6 @@ read_config () {
   option=""
   filter=""
   zone=""
-  #if [ -n "$image" ];then
-  #  option="${option} --image $image"
-  #fi
   if [ "$preemptible" -eq 1 ];then
     option="${option} --preemptible"
   fi
@@ -667,7 +663,16 @@ while :;do
             if [[ ! -f "$startup" ]];then
               make_startup
             fi
-            cmd_exec "$gcloud compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $option --image ${image[$i]}"
+            custom_memory=$(((mem[$i]/256+1)*256))
+            custom_image=${image[$i]}
+            if [[ -z "$custom_image" ]];then
+              custom_image=${image[0]}
+            fi
+            gcloud_option="$option --image ${custom_image} --custom-cpu ${core[$i]} --custom-memory ${custom_memory}MB"
+            if [[ -n "${disk[$i]}" ]];then
+              gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
+            fi
+            cmd_exec "$gcloud compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option"
             break
           fi
           instance_name=""
