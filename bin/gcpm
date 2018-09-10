@@ -590,7 +590,7 @@ fi
 condor_status >&/dev/null
 ret=$?
 if [[ $ret -eq 1 ]];then
-  err "condor seems not running, please check.
+  err "condor seems not running, please check"
   exit 1
 elif [[ $ret -ne 0 ]];then
   err "Please install HTCondor"
