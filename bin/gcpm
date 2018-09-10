@@ -543,6 +543,22 @@ if [ "$edit" -eq 1 ];then
   exit $?
 fi
 
+# pool_password management
+if [ -n "$pool_password" ];then
+  if ! gsutil ls | grep "${bucket}$" >/dev/null;then
+    z=${zone#*=}
+    z=${z%-*}
+    cmd_exec "sutil mb -c coldline -l $z $bucket"
+    ret=$?
+    if [ $ret -ne 0 ];then
+      exit $ret
+    fi
+  fi
+  cmd_exec "gsutil cp $pool_password ${bucket}"
+  ret=$?
+  exit $ret
+fi
+
 # Check gcloud utils
 if ! type $gcloud >& /dev/null;then
   if [[ $system -eq 0 ]];then
@@ -570,21 +586,15 @@ if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
   exit 1
 fi
 
-
-# pool_password management
-if [ -n "$pool_password" ];then
-  if ! gsutil ls | grep "${bucket}$" >/dev/null;then
-    z=${zone#*=}
-    z=${z%-*}
-    cmd_exec "sutil mb -c coldline -l $z $bucket"
-    ret=$?
-    if [ $ret -ne 0 ];then
-      exit $ret
-    fi
-  fi
-  cmd_exec "gsutil cp $pool_password ${bucket}"
-  ret=$?
-  exit $ret
+# Check condor
+condor_status >&/dev/null
+ret=$?
+if [[ $ret -eq 1 ]];then
+  err "condor seems not running, please check.
+  exit 1
+elif [[ $ret -ne 0 ]];then
+  err "Please install HTCondor"
+  exit 1
 fi
 
 # Update worker nodes at first
