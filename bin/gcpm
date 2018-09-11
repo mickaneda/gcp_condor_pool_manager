@@ -568,8 +568,10 @@ if ! type $gcloud >& /dev/null;then
       read -srn 1 ans </dev/tty
       if [ "$ans" = "y" ];then
         curl https://sdk.cloud.google.com | bash
-        break
+        echo "Setup gcloud's account"
+        exit
       elif [ "$ans" = "n" ];then
+        err "Intall gcloud: https://cloud.google.com/sdk/install"
         exit 1
       fi
     done
