@@ -1,33 +1,38 @@
-# gcp_condor_pool_manager
+# gcp_condor_pool_manager (gcpm)
 
 HTCondor pool manager for Google Cloud Platform.
 
 ## Installation
 
-Install bin/gcp_condor_pool_manager in any directory in PATH.
+### User install
+Install **bin/gcpm** in any directory in PATH.
 
-Prepare ~/.config/gcp_condor_pool_manager/config like:
+Prepare **~/.config/gcp_condor_pool_manager/config**.
 
-    max_cores 20
-    prefix gcp-wn
-    core 1,8
-    mem 3750,30000
-    preemptible 1
-    off_tiemr 600
-    zones asia-northeast1-b
-    tag allow-head
-    image gcp-wn-1core,gcp-wn-8core
-    reuse 0
-    interval 10
-    head_info gcp
-    bucket gs://gcpm-condor
-    admin admin@example.com
-    owner CondorOwner
+An example file of configuration file is **./etc/gcpm.conf**.
 
-Prepare condor worker image (and set its name for image in config).
+### System install
 
-For max, core, mem, and image, multiple settings can be set separated by ",".
+gcpm can be run as daemon service of Systemd.
 
+To install it, run ./scripts/install.sh.
+
+Template configuration file is installed as **/etc/gcpm.conf**.
+
+Edit configuration file, and then
+
+    # systemctl enable gcpm
+    # systemctl start gcpm
+
+### Configuration file
+
+See an example of configuration file: **./etc/gcpm.conf**.
+
+For max, core, mem, disk, and image, multiple settings can be set separated by ",".
+
+## Image preparation
+
+Prepare condor worker image (and set its name for image in **config**/**gcpm.conf**).
 
 ## Usage
 
