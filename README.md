@@ -32,7 +32,31 @@ For max, core, mem, disk, and image, multiple settings can be set separated by "
 
 ## Image preparation
 
-Prepare condor worker image (and set its name for image in **config**/**gcpm.conf**).
+First, make image:
+
+    $ cd scripts
+    $ ./make_template.sh
+
+This will make CentOS7 template machine for gcpm in GCP (default name is `gcp-wn-template-01`).
+
+Then, make image from the template machine.
+
+You can use `gce make_image` command in [gcp-tools](https://github.com/mickaneda/gcp-tools).
+
+    $ git clone https://github.com/mickaneda/gcp-tools.git
+    $ export PATH=$PATH:./gcp-tools/bin
+    $ gce make_image gcp-wn-template-01 gcp-wn-image-01
+
+This image can be used for different number of cores.
+You just need to set the image in your config/gcpm.conf like:
+
+    image gcp-wn-image-01
+
+Maybe you want to delete the template:
+
+    $ gce rm gcp-wn-template-01
+
+You can modify machine settings before making image if necessary.
 
 ## Usage
 

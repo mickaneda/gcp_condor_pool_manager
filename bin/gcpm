@@ -47,6 +47,7 @@ owner=""
 log_level=INFO
 log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
+gcloud_cmd="$gcloud"
 
 PARAMS=(max max_cores prefix core mem disk image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
 PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level gcloud)
@@ -209,7 +210,7 @@ $(for p in "${PARAMS[@]}";do eval "echo \$p = \${$p[@]}";done)"
 # Functions: Read config function
 check_var () {
   local name="$1"
-  local var="$2"
+  local var="${2//\"/}"
   local is_num="${3:-0}"
   local no_empty="${4:-0}"
   local array="${4:-0}"
@@ -406,6 +407,9 @@ read_config () {
   fi
 
   # Set gcloud options
+  if ! type "$gcloud" >&/dev/null;then
+    gcloud_cmd=gcloud
+  fi
   option=""
   filter=""
   zone=""
@@ -443,7 +447,7 @@ update_wns () {
       names=("${names[@]}" "${name}")
       ips=("${ips[@]}" "${ip}")
     fi
-  done < <(eval $gcloud compute instances list $filter|grep "^$prefix")
+  done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 
   # Check instance which is not running, but in condor_status (should be in the list until it is removed from the status)
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
@@ -492,10 +496,10 @@ clean_wns () {
     instance=($line)
     name=${instance[0]}
     if [[ "${in_status[*]}" != *${name}* ]];then
-      cmd_exec "echo y|$gcloud compute instances delete ${name} $zone"
+      cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone"
       is_deleted=1
     fi
-  done < <(eval $gcloud compute instances list $filter|grep "^$prefix")
+  done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
   if [ $is_deleted -eq 1 ];then
     update_wns
   fi
@@ -560,7 +564,7 @@ if [ -n "$pool_password" ];then
 fi
 
 # Check gcloud utils
-if ! type $gcloud >& /dev/null;then
+if ! type $gcloud_cmd >& /dev/null;then
   if [[ $system -eq 0 ]];then
     message="gcloud tools are not installed, do you want to install?"
     while : ;do
@@ -581,7 +585,7 @@ if ! type $gcloud >& /dev/null;then
   fi
 fi
 
-gcloud_auth_list=$(echo && $gcloud config list 2>&1)
+gcloud_auth_list=$(echo && $gcloud_cmd config list 2>&1)
 notice "$gcloud_auth_list"
 if [[ "$gcloud_auth_list" != *account\ *project\ * ]];then
   err "Set account/project for gcloud"
@@ -626,7 +630,7 @@ while :;do
         add=1
         terminated=("${terminated[@]}" "${name}")
       else
-        cmd_exec "echo y|$gcloud compute instances delete ${name} $zone"
+        cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone"
         # Update worker node information
         update_wns
       fi
@@ -645,7 +649,7 @@ while :;do
         done
       fi
     fi
-  done < <(eval $gcloud compute instances list $filter|grep "^$prefix")
+  done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 
   for((i=0;i<${#core[@]};i++));do
     n_idle=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
@@ -662,7 +666,7 @@ while :;do
       for instance in "${terminated[@]}";do
         if [[ $instance == ${prefix_core[$i]}* ]];then
           instance_name=$instance
-          cmd_exec "$gcloud compute start $instance_name"
+          cmd_exec "$gcloud_cmd compute start $instance_name"
           echo ""
         fi
       done
@@ -684,7 +688,7 @@ while :;do
             if [[ -n "${disk[$i]}" ]];then
               gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
             fi
-            cmd_exec "$gcloud compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option"
+            cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option"
             break
           fi
           instance_name=""
