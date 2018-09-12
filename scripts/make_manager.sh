@@ -127,6 +127,7 @@ exec_cmd () {
 
   if [ -n "$gcpm_conf" ];then
     echo "$(if [ -n "$gcpm_conf" ];then cat "$gcpm_conf"|sed 's/"/\\"/g';fi)" >/etc/gcpm.conf
+    echo "/etc/gcpm.conf was updated"
     if [ -n "${bucket}" ] && [ -n "$service_account" ];then
       exec_cmd systemctl enable gcpm
       exec_cmd systemctl start gcpm

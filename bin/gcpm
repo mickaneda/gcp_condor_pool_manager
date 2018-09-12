@@ -407,7 +407,9 @@ read_config () {
   fi
 
   # Set gcloud options
-  if ! type "$gcloud" >&/dev/null;then
+  if type "$gcloud" >&/dev/null;then
+    gcloud_cmd=$gcloud
+  else
     gcloud_cmd=gcloud
   fi
   option=""
