@@ -37,6 +37,9 @@ ret=$?
 if [ $ret -ne 0 ];then
   exit $ret
 fi
+# Wait 60 sec after instance is started for safe, otherwise image will be broken
+echo "Wait 60sec for safe..."
+sleep 60
 
 tmpdir=$(mktemp -d)
 if [ -z "$tmpdir" ];then
