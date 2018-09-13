@@ -623,6 +623,15 @@ while :;do
     total_cores=0
   fi
   while read -r line;do
+    core_check=0
+    for pc in "${prefix_core[@]}";do
+      if [[ "$line" == ${pc}* ]];then
+        core_check=1
+        break
+      fi
+    done
+    [[ $core_check -eq 0 ]] && continue
+
     instance=($line)
     name=${instance[0]}
     state=${instance[((${#instance[@]}-1))]}
