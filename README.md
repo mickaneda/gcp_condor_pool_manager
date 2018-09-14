@@ -30,34 +30,6 @@ See an example of configuration file: **./etc/gcpm.conf**.
 
 For max, core, mem, disk, and image, multiple settings can be set separated by ",".
 
-## Image preparation
-
-First, make image:
-
-    $ cd scripts
-    $ ./make_template.sh
-
-This will make CentOS7 template machine for gcpm in GCP (default name is `gcp-wn-template-01`).
-
-Then, make image from the template machine.
-
-You can use `gce make_image` command in [gcp-tools](https://github.com/mickaneda/gcp-tools).
-
-    $ git clone https://github.com/mickaneda/gcp-tools.git
-    $ export PATH=$PATH:./gcp-tools/bin
-    $ gce make_image gcp-wn-template-01 gcp-wn-image-01
-
-This image can be used for different number of cores.
-You just need to set the image in your config/gcpm.conf like:
-
-    image gcp-wn-image-01
-
-Maybe you want to delete the template:
-
-    $ gce rm gcp-wn-template-01
-
-You can modify machine settings before making image if necessary.
-
 ## Usage
 
 ### Set pool_password
@@ -85,4 +57,52 @@ If you want to load different config file, use `-f`:
 
 ### Edit configuration file
 
-   $ gcpm -e
+    $ gcpm -e
+
+## Image preparation
+
+Example puppet settings can be found in [gcpm-puppet](https://github.com/mickaneda/gcpm-puppet)
+
+By using gcpm-puppet, you can easily make image by:
+
+    $ cd scripts
+    $ ./make_image.sh
+
+This will make image **gcp-wn-image-01** (based on CentOS 7).
+
+You can check the image by
+
+    $ cd scripts
+    $ ./test_image.sh
+
+If you want to modify the image,
+it is useful to make template by gcpm-puppet.
+
+    $ cd scripts
+    $ ./make_template.sh
+
+This will make instance **gcp-wn-template-01**.
+Then you can login the instance and modify settings.
+
+An image can be easily made by using
+[gcp-tools](https://github.com/mickaneda/gcp-tools):
+
+    $ git clone https://github.com/mickaneda/gcp-tools
+    $ export PATH=$PATH:./gcp-tools/bin
+    $ gce make_image gcp-wn-template-01 gcp-wn-image-01
+
+## Make Manager
+
+A manager host also can be setup by [gcpm-puppet](https://github.com/mickaneda/gcpm-puppet).
+
+You can easily make a manager by:
+
+    $ cd scripts
+    $ ./make_manager.sh -b gs://<bucket-name> -g <path/to/gcpm.conf> -s <path/to/gcp/auth/file.json>
+
+Before run it, prepare **gcpm.conf**.
+You can start from the example: **./etc/gcpm.conf**.
+
+Please set same bucket-name in **gcpm.conf** and an argument for `-b`.
+
+You need authentication file for GCP which has right to manage Google Compute Engine and Storage.

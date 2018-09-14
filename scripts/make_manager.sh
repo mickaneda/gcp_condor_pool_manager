@@ -108,6 +108,14 @@ exec_cmd () {
   fi
 
   if [ -n "${bucket}" ];then
+    if ! gsutil ls|grep -q $bucket;then
+      exec_cmd gsutil mb ${bucket}
+    fi
+    if ! gsutil ls|grep -q $bucket/pool_password;then
+      condor_store_cred add -c -f ./pool_password  -p \$(openssl rand -base64 12|fold -w 10|head -1)
+      exec_cmd gsutil cp pool_password ${bucket}/
+      rm -f pool_password
+    fi
     exec_cmd gsutil cp ${bucket}/pool_password /etc/condor/
     exec_cmd chmod 600 /etc/condor/pool_password
     exec_cmd systemctl enable condor
