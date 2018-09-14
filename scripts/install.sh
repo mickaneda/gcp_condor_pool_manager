@@ -1,18 +1,19 @@
 #!/bin/sh
 
-cp bin/gcpm /usr/bin/
+basedir="$(dirname $0)/.."
+cp $basedir/bin/gcpm /usr/bin/
 echo "/usr/bin/gcpm was installed"
-cp usr/lib/systemd/system/gcpm.service /usr/lib/systemd/system/
+cp $basedir/usr/lib/systemd/system/gcpm.service /usr/lib/systemd/system/
 echo "/usr/lib/systemd/system/gcpm.service was installed"
-cp etc/rsyslog.d/gcpm.conf /etc/rsyslog.d/
+cp $basedir/etc/rsyslog.d/gcpm.conf /etc/rsyslog.d/
 systemctl daemon-reload
 echo "/etc/rsyslog/gcpm.conf was installed"
 systemctl restart rsyslog
-cp etc/logrotate.d/gcpm.conf /etc/logrotate.d/
+cp $basedir/etc/logrotate.d/gcpm.conf /etc/logrotate.d/
 echo "/etc/logrotate.d/gcpm.conf was installed"
 
 if [ ! -f /etc/gcpm.conf ];then
-  cp etc/gcpm.conf /etc/
+  cp $basedir/etc/gcpm.conf /etc/
   echo "/etc/gcpm.conf was installed"
   echo
   echo "Please modify /etc/gcpm.conf for your environment"

@@ -12,7 +12,7 @@ Arguments:
 -h                 Show help
 
 In addition, you can set template machine's settings as follows:
-$(./make_template.sh -h|grep -v "Usage"|grep -v -- "-n"|grep -v -- "-h")
+$($(dirname $0)/make_template.sh -h|grep -v "Usage"|grep -v -- "-n"|grep -v -- "-h")
 "
 
 options=""
@@ -32,7 +32,7 @@ while getopts n:z:p:f:i:m:d:o:h OPT;do
 done
 shift $((OPTIND - 1))
 
-./make_template.sh "$@"
+$(dirname $0)/make_template.sh "$@"
 ret=$?
 if [ $ret -ne 0 ];then
   exit $ret

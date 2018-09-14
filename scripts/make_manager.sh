@@ -58,7 +58,7 @@ if [[ "$name" != gcp-ce* ]];then
   exit 1
 fi
 
-./check_gcloud.sh
+$(dirname $0)/check_gcloud.sh
 ret=$?
 [[ $ret -ne 0 ]] && exit $ret
 

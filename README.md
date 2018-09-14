@@ -65,21 +65,18 @@ Example puppet settings can be found in [gcpm-puppet](https://github.com/mickane
 
 By using gcpm-puppet, you can easily make image by:
 
-    $ cd scripts
-    $ ./make_image.sh
+    $ ./scripts/make_image.sh
 
 This will make image **gcp-wn-image-01** (based on CentOS 7).
 
 You can check the image by
 
-    $ cd scripts
-    $ ./test_image.sh
+    $ ./scripts/test_image.sh
 
 If you want to modify the image,
 it is useful to make template by gcpm-puppet.
 
-    $ cd scripts
-    $ ./make_template.sh
+    $ ./scripts/make_template.sh
 
 This will make instance **gcp-wn-template-01**.
 Then you can login the instance and modify settings.
@@ -97,8 +94,9 @@ A manager host also can be setup by [gcpm-puppet](https://github.com/mickaneda/g
 
 You can easily make a manager by:
 
-    $ cd scripts
-    $ ./make_manager.sh -b gs://<bucket-name> -g <path/to/gcpm.conf> -s <path/to/gcp/auth/file.json>
+    $ ./scripts/make_manager.sh -b gs://<bucket-name> -g <path/to/gcpm.conf> -s <path/to/gcp/auth/file.json>
+
+HOSTNAME is **gcp-ce-01** by default.
 
 Before run it, prepare **gcpm.conf**.
 You can start from the example: **./etc/gcpm.conf**.
@@ -106,3 +104,33 @@ You can start from the example: **./etc/gcpm.conf**.
 Please set same bucket-name in **gcpm.conf** and an argument for `-b`.
 
 You need authentication file for GCP which has right to manage Google Compute Engine and Storage.
+
+There is a test user **condor_test** and some test files are in its home.
+To test, do:
+
+    $ gcloud compute ssh gce-ce-01
+    # @gce-ce-01
+    $ sudo su
+    # su condor_test
+    $ cd
+    $ ls
+    test.sh       test.sub      test8.sh      test8.sub
+    $ condor_submit test.sub
+    $ condor_submit test.sub
+    $ condor_submit test.sub
+    $ condor_submit test.sub
+    $ condor_submit test8.sub
+    $ condor_submit test8.sub
+    $ condor_submit test8.sub
+    $ condor_submit test8.sub
+    $ condor_status
+    $ condor_q
+    $ # etc...
+
+`test.sub` and `test8.sub` are single cpu job and 8 cpus job, respectively.
+
+The default **gcpm.conf** has 1 cpu and 8 cpus settings,
+then `gcpm` will create instances of them.
+
+After some time (a few sec~1 min), `condor_status` will show new instance and jobs will start.
+
