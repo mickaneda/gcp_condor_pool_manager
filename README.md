@@ -15,7 +15,9 @@ An example file of configuration file is **./etc/gcpm.conf**.
 
 gcpm can be run as daemon service of Systemd.
 
-To install it, run ./scripts/install.sh.
+To install it, run
+
+    # ./scripts/install.sh.
 
 Template configuration file is installed as **/etc/gcpm.conf**.
 

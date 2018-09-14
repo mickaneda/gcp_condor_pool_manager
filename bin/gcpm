@@ -151,7 +151,7 @@ logger () {
     local linepost=$(eval "printf =%.s {1..$width2}")
     msg="${msg}${linepre}\\n$*\\n${linepost}\\n"
   else
-    msg="${msg}$*\\n"
+    msg="${msg} $*\\n"
   fi
   local out=1
   print_cmd="printf"
