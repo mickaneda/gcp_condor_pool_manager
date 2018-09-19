@@ -263,8 +263,7 @@ sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
 sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
 sed -i"" 's/FIXME_DOMAIN/${domain}/' /etc/condor/config.d/10_security.config
-
-sed -i"" "s/FIXME_PRIVATE_DOMAIN/\${hostname -d}/" /etc/condor/config.d/10_security.config
+sed -i"" "s/FIXME_PRIVATE_DOMAIN/\$(hostname -d)/" /etc/condor/config.d/10_security.config
 
 sed -i"" 's/FIXME_OWNER/${owner}/' /etc/condor/config.d/20_workernode.config
 sed -i"" 's/FIXME_CORE/${core[$i]}/' /etc/condor/config.d/20_workernode.config
@@ -554,7 +553,7 @@ if [ -n "$pool_password" ];then
   if ! gsutil ls | grep "${bucket}$" >/dev/null;then
     z=${zone#*=}
     z=${z%-*}
-    cmd_exec "sutil mb -c coldline -l $z $bucket"
+    cmd_exec "gsutil mb -c coldline -l $z $bucket"
     ret=$?
     if [ $ret -ne 0 ];then
       exit $ret
