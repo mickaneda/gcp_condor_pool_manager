@@ -32,6 +32,7 @@ mem=()
 disk=()
 max=()
 max_cores=0
+static=()
 prefix="gcp-wn"
 image=()
 preemptible=1
@@ -49,8 +50,8 @@ log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
 gcloud_cmd="$gcloud"
 
-PARAMS=(max max_cores prefix core mem disk image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
-PARAMS_NO_EMPTY=(max_cores prefix core mem image head_info bucket admin owner log_level gcloud)
+PARAMS=(core mem disk max max_cores static prefix image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
+PARAMS_NO_EMPTY=(core mem max_cores prefix image head_info bucket admin owner log_level gcloud)
 
 # Config file
 config_dir="${HOME}/.config/gcp_condor_pool_manager"
@@ -311,6 +312,8 @@ read_config () {
         check_var max "$var" 1 1 1
       elif [ "$name" = "max_cores" ];then
         check_var max_cores "$var" 1 1
+      elif [ "$name" = "static" ];then
+        check_var static "$var" 0 0 1
       elif [ "$name" = "prefix" ];then
         check_var prefix "$var" 0 1
       elif [ "$name" = "core" ];then
@@ -432,6 +435,12 @@ update_wns () {
   # update condor configuration for worker nodes
   local names=()
   local ips=()
+
+  # Add static nodes
+  for wn in "${static[@]}";do
+    names=("${names[@]}" "${wn}")
+    ips=("${ips[@]}" "${wn}")
+  done
 
   # Get running instances
   local line
