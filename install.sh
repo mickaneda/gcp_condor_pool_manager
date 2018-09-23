@@ -1,42 +1,26 @@
 #!/usr/bin/env bash
 
+echo
+echo "###############################################"
+echo "Install gcpm to /opt/"
+echo "###############################################"
+echo
 url="https://github.com/mickaneda/gcp_condor_pool_manager/archive/master.tar.gz"
-if [[ $# -ge 1 ]];then
-  if [[ "$1" = --prefix=* ]];then
-    prefix="${$1#*=}"
-  elif [[ "$1" = "--prefix" || "$1" = "-p" ]];then
-    prefix="$2"
-  fi
-fi
-if [ -z "$prefix" ];then
-  prefix=/usr
-fi
-prefix=$(eval echo "$prefix")
-
-echo
-echo "###############################################"
-echo "Install gcpm to $prefix/bin"
-echo "###############################################"
-echo
-sudo=""
-if [ -d $prefix/bin ];then
-  touch $prefix/bin/.install.test >& /dev/null
-  if [ $? -ne 0 ];then
-    sudo=sudo
-  else
-    rm -f $prefix/bin/.install.test
-  fi
+mkdir -p /opt/
+cd /opt
+if type git >&/dev/null;then
+  git clone https://github.com/mickaneda/gcp_condor_pool_manager.git
+elif type curl >&/dev/null;then
+  curl -s -L -O  https://github.com/mickaneda/gcp_condor_pool_manager/archive/master.tar.gz
+  tar zxf master.tar.gz
+  rm -f master.tar.gz
+elif type wget >&/dev/null;then
+  wget -q   https://github.com/mickaneda/gcp_condor_pool_manager/archive/master.tar.gz
+  tar zxf master.tar.gz
+  rm -f master.tar.gz
 else
-  mkdir -p $prefix/bin>&  /dev/null
-  if [ $? -ne 0 ];then
-    sudo mkdir -p $prefix/bin
-    sudo=sudo
-  fi
+  echo "no download method is available, please get files from https://github.com/mickaneda/gcp_condor_pool_manager"
+  exit
 fi
-
-for s in ${scripts[@]};do
-  sname=`basename $s`
-  echo Intalling ${sname}...
-  $sudo curl -fsSL -o $prefix/bin/$sname $s
-  $sudo chmod 755 $prefix/bin/$sname
-done
+cd gcp_condor_pool_manager/scripts
+./install.sh
