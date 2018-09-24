@@ -15,7 +15,11 @@ An example file of configuration file is **./etc/gcpm.conf**.
 
 gcpm can be run as daemon service of Systemd.
 
-To install it, run
+To install it, do:
+
+    $ curl -fsSL https://raw.github.com/mikaneda/gcp_condor_pool_manager/install/install.sh| sh
+
+Or get gcp_condor_pool_manager repository and run:
 
     # ./scripts/install.sh.
 
