@@ -38,7 +38,7 @@ image=()
 preemptible=1
 off_timer=0
 zones=""
-tag=""
+network_tag=""
 reuse=0
 interval=10
 head_info=gcp
@@ -50,7 +50,7 @@ log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
 gcloud_cmd="$gcloud"
 
-PARAMS=(core mem disk max max_cores static prefix image preemptible off_timer zones tag reuse interval head_info bucket admin owner log_level gcloud)
+PARAMS=(core mem disk max max_cores static prefix image preemptible off_timer zones network_tag reuse interval head_info bucket admin owner log_level gcloud)
 PARAMS_NO_EMPTY=(core mem max_cores prefix image head_info bucket admin owner log_level gcloud)
 
 # Config file
@@ -331,8 +331,8 @@ read_config () {
       elif [ "$name" = "zones" ];then
         check_var zones "$var" 0 0
         zones=$(echo "$var"|tr , ' ')
-      elif [ "$name" = "tag" ];then
-        check_var tag "$var" 0 0
+      elif [ "$name" = "network_tag" ];then
+        check_var network_tag "$var" 0 0
       elif [ "$name" = "reuse" ];then
         check_var reuse "$var" 1 1
       elif [ "$name" = "interval" ];then
@@ -425,8 +425,8 @@ read_config () {
     zone="--zone=$(echo "$zones"|tr , ' '|cut -d' ' -f1)"
     option="${option} ${zone}"
   fi
-  if [ -n "$tag" ];then
-    option="${option} --tags=$tag"
+  if [ -n "$network_tag" ];then
+    option="${option} --tags=$network_tag"
   fi
 }
 
