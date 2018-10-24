@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.'
 
 GCPM_AUTHOR="Michiru Kaneda"
+GCPM_MAIL="Michiru.Kaneda@cern.ch"
 GCPM_VERSION="v0.0.1"
 GCPM_DATE="05/Sep/2018"
 
@@ -30,6 +31,7 @@ GCPM_DATE="05/Sep/2018"
 core=()
 mem=()
 disk=()
+idle=()
 max=()
 max_cores=0
 static=()
@@ -50,7 +52,7 @@ log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
 gcloud_cmd="$gcloud"
 
-PARAMS=(core mem disk max max_cores static prefix image preemptible off_timer zones network_tag reuse interval head_info bucket admin owner log_level gcloud)
+PARAMS=(core mem disk idle max max_cores static prefix image preemptible off_timer zones network_tag reuse interval head_info bucket admin owner log_level gcloud)
 PARAMS_NO_EMPTY=(core mem max_cores prefix image head_info bucket admin owner log_level gcloud)
 
 # Config file
@@ -83,7 +85,7 @@ LOGGER_LEVELS=("DEBUG" "INFO" "NOTICE" "WARNING" "ERROR")
 LOGGER_COLORS=(3 "" 36 33 31)
 
 get_log_level () {
-  if [ $# -eq 0 ];then
+  if [[ $# -eq 0 ]];then
     local level=1
   else
     local level=$1
@@ -102,7 +104,7 @@ get_log_level () {
 }
 
 get_log_level_name () {
-  if [ $# -eq 0 ];then
+  if [[ $# -eq 0 ]];then
     local level=INFO
   else
     local level=$1
@@ -215,12 +217,12 @@ check_var () {
   local is_num="${3:-0}"
   local no_empty="${4:-0}"
   local array="${4:-0}"
-  if [ "$array" -eq 1 ];then
+  if [[ "$array" -eq 1 ]];then
     var=(${var//,/ })
   else
     var=("$var")
   fi
-  if [ "${var[*]}" = "$(eval "echo \${$name[*]}")" ];then
+  if [[ "${var[*]}" = "$(eval "echo \${$name[*]}")" ]];then
     return 0
   fi
 
@@ -233,7 +235,7 @@ check_var () {
     done
   fi
 
-  if [ "$no_empty" -eq 1 ];then
+  if [[ "$no_empty" -eq 1 ]];then
     for v in "${var[@]}";do
       if [ -z "$v" ];then
         err "$name must not be empty. Check your configuration file."
@@ -242,7 +244,7 @@ check_var () {
     done
   fi
 
-  if [ "$array" -eq 1 ];then
+  if [[ "$array" -eq 1 ]];then
     eval "$name=(${var[*]})"
   else
     eval "$name=${var[0]}"
@@ -284,7 +286,7 @@ while :;do
 done
 date > /root/condor_started
 EOF
-    if [ $off_timer -ne 0 ];then
+    if [[ $off_timer -ne 0 ]];then
       cat << EOF >> "${startup_prefix}-${core[$i]}core.sh"
 sleep $off_timer
 condor_off -peaceful -startd
@@ -295,7 +297,7 @@ EOF
 }
 
 read_config () {
-  if [ ! -f "$config_file" ];then
+  if [[ ! -f "$config_file" ]];then
     err "Configuration file:$config_file doesn't exist"
     exit 1
   else
@@ -308,88 +310,71 @@ read_config () {
         continue
       fi
       local var=${line[1]}
-      if [ "$name" = "max" ];then
-        check_var max "$var" 1 1 1
-      elif [ "$name" = "max_cores" ];then
-        check_var max_cores "$var" 1 1
-      elif [ "$name" = "static" ];then
-        check_var static "$var" 0 0 1
-      elif [ "$name" = "prefix" ];then
-        check_var prefix "$var" 0 1
-      elif [ "$name" = "core" ];then
-        check_var core "$var" 1 1 1
-      elif [ "$name" = "mem" ];then
-        check_var mem "$var" 1 1 1
-      elif [ "$name" = "disk" ];then
-        check_var disk "$var" 0 1 1
-      elif [ "$name" = "image" ];then
-        check_var image "$var" 0 1 1
-      elif [ "$name" = "preemptible" ];then
-        check_var preemptible "$var" 1 1
-      elif [ "$name" = "off_timer" ];then
-        check_var off_timer "$var" 1 1
-      elif [ "$name" = "zones" ];then
-        check_var zones "$var" 0 0
-        zones=$(echo "$var"|tr , ' ')
-      elif [ "$name" = "network_tag" ];then
-        check_var network_tag "$var" 0 0
-      elif [ "$name" = "reuse" ];then
-        check_var reuse "$var" 1 1
-      elif [ "$name" = "interval" ];then
-        check_var interval "$var" 1 1
-      elif [ "$name" = "head_info" ];then
-        check_var head_info "$var" 0 1
-      elif [ "$name" = "bucket" ];then
-        check_var bucket "$var" 0 1
-      elif [ "$name" = "admin" ];then
-        check_var admin "$var" 0 1
-      elif [ "$name" = "owner" ];then
-        check_var owner "$var" 0 1
-      elif [ "$name" = "log_level" ];then
-        check_var log_level "$var" 0 1
-        set_log_level "$log_level"
-      elif [ "$name" = "gcloud" ];then
-        check_var gcloud "$var" 0 1
-      else
-        warn "$name is not valid parameter"
-      fi
+      case "$name" in
+        idle)        check_var idle        "$var" 1 1 1;;
+        max)         check_var max         "$var" 1 1 1;;
+        max_cores)   check_var max_cores   "$var" 1 1;;
+        static)      check_var static      "$var" 0 0 1;;
+        prefix)      check_var prefix      "$var" 0 1;;
+        core)        check_var core        "$var" 1 1 1;;
+        mem)         check_var mem         "$var" 1 1 1;;
+        disk)        check_var disk        "$var" 0 1 1;;
+        image)       check_var image       "$var" 0 1 1;;
+        preemptible) check_var preemptible "$var" 1 1;;
+        off_timer)   check_var off_timer   "$var" 1 1;;
+        zones)       check_var zones       "$var" 0 0; zones=$(echo  "$var" |tr , ' ');;
+        network_tag) check_var network_tag "$var" 0 0;;
+        reuse)       check_var reuse       "$var" 1 1;;
+        interval)    check_var interval    "$var" 1 1;;
+        head_info)   check_var head_info   "$var" 0 1;;
+        bucket)      check_var bucket      "$var" 0 1;;
+        admin)       check_var admin       "$var" 0 1;;
+        owner)       check_var owner       "$var" 0 1;;
+        log_level)   check_var log_level   "$var" 0 1; set_log_level "$log_level";;
+        gcloud)      check_var gcloud      "$var" 0 1;;
+        *)           warn "$name is not valid parameter";;
+      esac
     done < "$config_file"
   fi
 
   # No reuse for non zero off timer nodes
-  if [ $off_timer -ne 0 ];then
+  if [[ $off_timer -ne 0 ]];then
     reuse=0
   fi
 
   # check variables
   for v in "${PARAMS_NO_EMPTY[@]}";do
-    if [ -z "$(eval "echo \$$v")" ];then
+    if [[ -z "$(eval "echo \$$v")" ]];then
       err "$v must not be empty"
       exit 1
     fi
   done
 
-  if [ ${#core[@]} -gt ${#max[@]} ];then
+  if [[ ${#core[@]} -ne ${#idle[@]} ]];then
+    err "core and idle have different number of definitions"
+    exit 1
+  fi
+  if [[ ${#core[@]} -ne ${#max[@]} ]];then
     err "core and max have different number of definitions"
     exit 1
   fi
-  if [ ${#core[@]} -gt ${#mem[@]} ];then
+  if [[ ${#core[@]} -ne ${#mem[@]} ]];then
     err "core and memory have different number of definitions"
     exit 1
   fi
 
-  if [ $is_updated -eq 1 ];then
+  if [[ $is_updated -eq 1 ]];then
     show_setup
   else
     return
   fi
 
   # Set head information, and make startup script
-  if [ "$head_info" = "hostname" ];then
+  if [[ "$head_info" = "hostname" ]];then
     head=${HOSTNAME}
-  elif [ "$head_info" = "ip" ];then
+  elif [[ "$head_info" = "ip" ]];then
     head=$(hostname -i)
-  elif [ "$head_info" = "gcp" ];then
+  elif [[ "$head_info" = "gcp" ]];then
     head=${HOSTNAME}
   else
     head=$head_info
@@ -417,15 +402,15 @@ read_config () {
   option=""
   filter=""
   zone=""
-  if [ "$preemptible" -eq 1 ];then
+  if [[ "$preemptible" -eq 1 ]];then
     option="${option} --preemptible"
   fi
-  if [ -n "$zones" ];then
+  if [[ -n "$zones" ]];then
     filter="--filter=\"zone:($(echo "$zones"|tr , ' '))\""
     zone="--zone=$(echo "$zones"|tr , ' '|cut -d' ' -f1)"
     option="${option} ${zone}"
   fi
-  if [ -n "$network_tag" ];then
+  if [[ -n "$network_tag" ]];then
     option="${option} --tags=$network_tag"
   fi
 }
@@ -453,7 +438,7 @@ update_wns () {
     else
       local ip=${instance[((${#instance[@]}-2))]}
     fi
-    if [ "$state" == "RUNNING" ];then
+    if [[ "$state" == "RUNNING" ]];then
       names=("${names[@]}" "${name}")
       ips=("${ips[@]}" "${ip}")
     fi
@@ -467,7 +452,7 @@ update_wns () {
   for wn in "${in_status[@]}";do
     if ! echo " ${names[*]} "|grep -q " $wn ";then
       local ip=$(grep "$wn" "$wn_list"|cut -d" " -f2)
-      if [ -n "$ip" ];then
+      if [[ -n "$ip" ]];then
         names=("${names[@]}" "${wn}")
         ips=("${ips[@]}" "${ip}")
       else
@@ -480,7 +465,7 @@ update_wns () {
   local n=0
   local wns=""
   : > "$wn_list"
-  while [ $n -lt ${#names[@]} ];do
+  while [[ $n -lt ${#names[@]} ]];do
     wns="$wns condor@\$(UID_DOMAIN)/${ips[$n]} condor_pool@\$(UID_DOMAIN)/${ips[$n]}"
     echo "${names[$n]} ${ips[$n]}" >> "$wn_list"
     ((n++))
@@ -552,13 +537,13 @@ fi
 read_config
 
 # Edit
-if [ "$edit" -eq 1 ];then
+if [[ "$edit" -eq 1 ]];then
   ${EDITOR:-vi} "$config_file"
   exit $?
 fi
 
 # pool_password management
-if [ -n "$pool_password" ];then
+if [[ -n "$pool_password" ]];then
   if ! gsutil ls | grep "${bucket}$" >/dev/null;then
     z=${zone#*=}
     z=${z%-*}
@@ -580,11 +565,11 @@ if ! type $gcloud_cmd >& /dev/null;then
     while : ;do
       echo "$message [y/n]: " >/dev/tty
       read -srn 1 ans </dev/tty
-      if [ "$ans" = "y" ];then
+      if [[ "$ans" = "y" ]];then
         curl https://sdk.cloud.google.com | bash
         echo "Setup gcloud's account"
         exit
-      elif [ "$ans" = "n" ];then
+      elif [[ "$ans" = "n" ]];then
         err "Intall gcloud: https://cloud.google.com/sdk/install"
         exit 1
       fi
@@ -644,8 +629,8 @@ while :;do
     name=${instance[0]}
     state=${instance[((${#instance[@]}-1))]}
     add=0
-    if [ "$state" == "TERMINATED" ];then
-      if [ $reuse -eq 1 ];then
+    if [[ "$state" = "TERMINATED" ]];then
+      if [[ $reuse -eq 1 ]];then
         add=1
         terminated=("${terminated[@]}" "${name}")
       else
@@ -653,7 +638,7 @@ while :;do
         # Update worker node information
         update_wns
       fi
-    elif [ "$state" == "RUNNING" ];then
+    elif [[ "$state" = "RUNNING" ]];then
       add=1
     fi
     if [ $add -eq 1 ];then
@@ -671,15 +656,22 @@ while :;do
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 
   for((i=0;i<${#core[@]};i++));do
-    n_idle=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
-    if [ "$n_idle" -eq 0 ];then
-      continue
+    if [[ ${idle[$i]} -ne 0 ]];then
+      n_idle=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
+      if [ "$n_idle" -eq 0 ];then
+        continue
+      fi
     fi
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
     n_machines=$(echo "$machines"|wc -l)
     n_unclaimed=$(echo "$machines"|grep -c " Unclaimed")
+    n_unclaimed=$((n_unclaimed-${idle[$i]}))
 
-    if [[ $n_unclaimed -eq 0 && $((total_cores+${core[$i]})) -le $max_cores && $n_machines -lt ${max[$i]} ]];then
+    max_core_check=1
+    if [[ $max_cores -ne 0 ]] && [[ $((total_cores+${core[$i]})) -gt $max_cores ]];then
+      max_core_check=0
+    fi
+    if [[ $n_unclaimed -le 0 && $max_core_check -eq 1 && $n_machines -lt ${max[$i]} ]];then
       # start/create instance
       instance_name=""
       for instance in "${terminated[@]}";do
@@ -689,9 +681,9 @@ while :;do
           echo ""
         fi
       done
-      if [ -z "$instance_name" ];then
+      if [[ -z "$instance_name" ]];then
         n=1
-        while [ $n -lt 10000 ];do
+        while [[ $n -lt 10000 ]];do
           instance_name=${prefix_core[$i]}-$(printf "%04d" $n)
           if ! echo "${all[*]}"|grep -q "$instance_name";then
             startup="${startup_prefix}-${core[$i]}core.sh"
@@ -714,7 +706,7 @@ while :;do
           ((n++))
         done
       fi
-      if [ -n "$instance_name" ];then
+      if [[ -n "$instance_name" ]];then
         # Update worker node information
         update_wns
 
@@ -729,7 +721,7 @@ while :;do
             break
           fi
           ((try++))
-          if [ $try -gt 100 ];then
+          if [[ $try -gt 100 ]];then
             warn "$instance_name is still not available in the condor pool.
 Please check $instance_name status"
             break
