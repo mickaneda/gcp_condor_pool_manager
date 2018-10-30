@@ -663,7 +663,7 @@ while :;do
       fi
     fi
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
-    n_machines=$(printf "$machines"|grep -c)
+    n_machines=$(printf "$machines"|grep -c '')
     n_unclaimed=$(printf "$machines"|grep -c " Unclaimed")
     n_unclaimed=$((n_unclaimed-${idle[$i]}))
 
