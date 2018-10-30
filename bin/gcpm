@@ -24,8 +24,8 @@ SOFTWARE.'
 
 GCPM_AUTHOR="Michiru Kaneda"
 GCPM_MAIL="Michiru.Kaneda@cern.ch"
-GCPM_VERSION="v0.0.1"
-GCPM_DATE="05/Sep/2018"
+GCPM_VERSION="v0.0.2"
+GCPM_DATE="30/Oct/2018"
 
 # Default parameters
 core=()
@@ -522,7 +522,7 @@ while getopts esvhf:l:p: OPT;do
       wn_list="/var/cache/gcpm/wn_list"
       startup_prefix="/var/cache/gcpm/startup"
       ;;
-    "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR"; exit;;
+    "v" ) echo "version: $GCPM_VERSION, date: $GCPM_DATE, author: $GCPM_AUTHOR", mail: $GCPM_MAIL; exit;;
     "h" ) echo "$HELP"; exit;;
     * ) echo "Unknown arguments: $OPT"; echo; echo "$HELP"; exit 1;;
   esac
@@ -663,8 +663,8 @@ while :;do
       fi
     fi
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
-    n_machines=$(echo "$machines"|wc -l)
-    n_unclaimed=$(echo "$machines"|grep -c " Unclaimed")
+    n_machines=$(printf "$machines"|grep -c)
+    n_unclaimed=$(printf "$machines"|grep -c " Unclaimed")
     n_unclaimed=$((n_unclaimed-${idle[$i]}))
 
     max_core_check=1
