@@ -24,8 +24,8 @@ SOFTWARE.'
 
 GCPM_AUTHOR="Michiru Kaneda"
 GCPM_MAIL="Michiru.Kaneda@cern.ch"
-GCPM_VERSION="v0.0.2"
-GCPM_DATE="30/Oct/2018"
+GCPM_VERSION="v0.0.3"
+GCPM_DATE="5/Nov/2018"
 
 # Default parameters
 core=()
@@ -656,7 +656,7 @@ while :;do
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 
   for((i=0;i<${#core[@]};i++));do
-    if [[ ${idle[$i]} -ne 0 ]];then
+    if [[ ${idle[$i]} -eq 0 ]];then
       n_idle=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
       if [ "$n_idle" -eq 0 ];then
         continue
@@ -671,64 +671,65 @@ while :;do
     if [[ $max_cores -ne 0 ]] && [[ $((total_cores+${core[$i]})) -gt $max_cores ]];then
       max_core_check=0
     fi
-    if [[ $n_unclaimed -le 0 && $max_core_check -eq 1 && $n_machines -lt ${max[$i]} ]];then
-      # start/create instance
-      instance_name=""
-      for instance in "${terminated[@]}";do
-        if [[ $instance == ${prefix_core[$i]}* ]];then
-          instance_name=$instance
-          cmd_exec "$gcloud_cmd compute start $instance_name"
-          echo ""
+    if [[ $n_unclaimed -gt 0 || $max_core_check -eq 0 || $n_machines -ge ${max[$i]} ]];then
+      continue
+    fi
+    # start/create instance
+    instance_name=""
+    for instance in "${terminated[@]}";do
+      if [[ $instance == ${prefix_core[$i]}* ]];then
+        instance_name=$instance
+        cmd_exec "$gcloud_cmd compute start $instance_name"
+        echo ""
+      fi
+    done
+    if [[ -z "$instance_name" ]];then
+      n=1
+      while [[ $n -lt 10000 ]];do
+        instance_name=${prefix_core[$i]}-$(printf "%04d" $n)
+        if ! echo "${all[*]}"|grep -q "$instance_name";then
+          startup="${startup_prefix}-${core[$i]}core.sh"
+          if [[ ! -f "$startup" ]];then
+            make_startup
+          fi
+          custom_memory=$(((mem[$i]/256+1)*256))
+          custom_image=${image[$i]}
+          if [[ -z "$custom_image" ]];then
+            custom_image=${image[0]}
+          fi
+          gcloud_option="$option --image ${custom_image} --custom-cpu ${core[$i]} --custom-memory ${custom_memory}MB"
+          if [[ -n "${disk[$i]}" ]];then
+            gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
+          fi
+          cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option"
+          break
         fi
+        instance_name=""
+        ((n++))
       done
-      if [[ -z "$instance_name" ]];then
-        n=1
-        while [[ $n -lt 10000 ]];do
-          instance_name=${prefix_core[$i]}-$(printf "%04d" $n)
-          if ! echo "${all[*]}"|grep -q "$instance_name";then
-            startup="${startup_prefix}-${core[$i]}core.sh"
-            if [[ ! -f "$startup" ]];then
-              make_startup
-            fi
-            custom_memory=$(((mem[$i]/256+1)*256))
-            custom_image=${image[$i]}
-            if [[ -z "$custom_image" ]];then
-              custom_image=${image[0]}
-            fi
-            gcloud_option="$option --image ${custom_image} --custom-cpu ${core[$i]} --custom-memory ${custom_memory}MB"
-            if [[ -n "${disk[$i]}" ]];then
-              gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
-            fi
-            cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option"
-            break
-          fi
-          instance_name=""
-          ((n++))
-        done
-      fi
-      if [[ -n "$instance_name" ]];then
-        # Update worker node information
-        update_wns
+    fi
+    if [[ -n "$instance_name" ]];then
+      # Update worker node information
+      update_wns
 
-        # Check new instance in the pool
-        try=0
-        while :;do
-          if condor_status |grep -q "$instance_name" ;then
-            info "$instance_name is added in the pool"
-            if [[ $max_cores -ne 0 ]];then
-              total_cores=$((total_cores+${core[$i]}))
-            fi
-            break
+      # Check new instance in the pool
+      try=0
+      while :;do
+        if condor_status |grep -q "$instance_name" ;then
+          info "$instance_name is added in the pool"
+          if [[ $max_cores -ne 0 ]];then
+            total_cores=$((total_cores+${core[$i]}))
           fi
-          ((try++))
-          if [[ $try -gt 100 ]];then
-            warn "$instance_name is still not available in the condor pool.
-Please check $instance_name status"
-            break
-          fi
-          sleep 1
-        done
-      fi
+          break
+        fi
+        ((try++))
+        if [[ $try -gt 100 ]];then
+          warn "$instance_name is still not available in the condor pool.
+Plea check $instance_name status"
+          break
+        fi
+        sleep 1
+      done
     fi
   done
   sleep $interval
