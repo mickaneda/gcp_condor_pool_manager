@@ -24,8 +24,8 @@ SOFTWARE.'
 
 GCPM_AUTHOR="Michiru Kaneda"
 GCPM_MAIL="Michiru.Kaneda@cern.ch"
-GCPM_VERSION="v0.0.3"
-GCPM_DATE="5/Nov/2018"
+GCPM_VERSION="v0.0.4"
+GCPM_DATE="8/Nov/2018"
 
 # Default parameters
 core=()
@@ -656,22 +656,16 @@ while :;do
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 
   for((i=0;i<${#core[@]};i++));do
-    if [[ ${idle[$i]} -eq 0 ]];then
-      n_idle=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
-      if [ "$n_idle" -eq 0 ];then
-        continue
-      fi
-    fi
+    n_idle_jobs=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
     n_machines=$(printf "$machines"|grep -c '')
-    n_unclaimed=$(printf "$machines"|grep -c " Unclaimed")
-    n_unclaimed=$((n_unclaimed-${idle[$i]}))
+    n_unclaimed=$(($(printf "$machines"|grep -c " Unclaimed")-n_idle_jobs-${idle[$i]}))
 
     max_core_check=1
     if [[ $max_cores -ne 0 ]] && [[ $((total_cores+${core[$i]})) -gt $max_cores ]];then
       max_core_check=0
     fi
-    if [[ $n_unclaimed -gt 0 || $max_core_check -eq 0 || $n_machines -ge ${max[$i]} ]];then
+    if [[ $n_unclaimed -ge 0 || $max_core_check -eq 0 || $n_machines -ge ${max[$i]} ]];then
       continue
     fi
     # start/create instance
