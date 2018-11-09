@@ -686,7 +686,10 @@ while :;do
           if [[ ! -f "$startup" ]];then
             make_startup
           fi
-          custom_memory=$(((mem[$i]/256+1)*256))
+          custom_memory=$(mem[$i]/256*256)
+          if [ $custom_memory -lt ${mem[$i]} ];then
+            custom_memory=$((mem[$i]+256))
+          fi
           custom_image=${image[$i]}
           if [[ -z "$custom_image" ]];then
             custom_image=${image[0]}
