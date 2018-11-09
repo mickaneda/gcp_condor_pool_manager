@@ -688,7 +688,7 @@ while :;do
           fi
           custom_memory=$(mem[$i]/256*256)
           if [ $custom_memory -lt ${mem[$i]} ];then
-            custom_memory=$((mem[$i]+256))
+            custom_memory=$((custom_memory+256))
           fi
           custom_image=${image[$i]}
           if [[ -z "$custom_image" ]];then
