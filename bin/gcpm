@@ -262,7 +262,7 @@ make_startup () {
   for ((i=0;i<${#core[@]};i++));do
     cat << EOF > "${startup_prefix}-${core[$i]}core.sh"
 #/bin/bash
-echo "{\"core\":${core[@i]},\"mem\":${mem[$i]},\"disk\":${disk[$i]},\"image\":\"${image}\",\"preemptible\":$preemptible}" >/var/log/nodeinfo.log
+echo "{\"core\":${core[$i]},\"mem\":${mem[$i]},\"disk\":${disk[$i]},\"image\":\"${image}\",\"preemptible\":$preemptible}" >/var/log/nodeinfo.log
 
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
@@ -688,7 +688,7 @@ while :;do
           if [[ ! -f "$startup" ]];then
             make_startup
           fi
-          custom_memory=$(mem[$i]/256*256)
+          custom_memory=$((mem[$i]/256*256))
           if [ $custom_memory -lt ${mem[$i]} ];then
             custom_memory=$((custom_memory+256))
           fi
