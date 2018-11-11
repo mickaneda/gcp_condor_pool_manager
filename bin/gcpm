@@ -262,6 +262,8 @@ make_startup () {
   for ((i=0;i<${#core[@]};i++));do
     cat << EOF > "${startup_prefix}-${core[$i]}core.sh"
 #/bin/bash
+echo "{\"core\":${core[@i]},\"mem\":${mem[$i]},\"disk\":${disk[$i]},\"image\":\"${image}\",\"preemptible\":$preemptible}" >/var/log/nodeinfo.log
+
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
 sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
