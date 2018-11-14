@@ -506,10 +506,18 @@ clean_wns () {
   debug "clean_wns ()"
   # Delete instances not in condor_status, which were removed by condor_off
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
+  wn_starting_tmp=("${wn_starting[@]}")
+  wn_starting=()
+  for wn in ${wn_starting_tmp[@]};do
+    if ! echo " ${in_status[*]} "|grep -q "$wn";then
+      wn_starting=("${wn_starting[@]}" "$wn")
+    fi
+  done
+  local exist=$("${in_status[@]}" "${wn_starting[@]}")
   while read -r line;do
     instance=($line)
     name=${instance[0]}
-    if ! echo "${wn_starting[*]} "|grep -q "$name " && ! echo "${in_status[*]} "|grep -q "$name ";then
+    if ! echo " ${exist[*]} "|grep -q "$name ";then
       cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" $level $bg_cmd
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
@@ -669,11 +677,8 @@ while :;do
       fi
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
-  wn_starting_tmp=("${wn_starting[@]}")
-  wn_starting=()
-  for wn in ${wn_starting_tmp[@]};do
+  for wn in ${wn_startingp[@]};do
     if ! echo "${all[*]}"|grep -q "$wn";then
-      wn_starting=("${wn_starting[@]}" "$wn")
       all=("${all[@]}" "$wn")
       if [[ $max_cores -ne 0 ]];then
         for p in "${prefix_core[@]}";do
