@@ -513,7 +513,7 @@ clean_wns () {
       wn_starting=("${wn_starting[@]}" "$wn")
     fi
   done
-  local exist=$("${in_status[@]}" "${wn_starting[@]}")
+  local exist=("${in_status[@]}" "${wn_starting[@]}")
   while read -r line;do
     instance=($line)
     name=${instance[0]}
