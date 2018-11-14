@@ -204,6 +204,7 @@ cmd_exec () {
   logger "$level" "$ $1"
   local out=""
   check_log_level "$level" || out=">/dev/null"
+  eval "echo \$ $1 $out"
   if [ $is_bg -eq 0 ];then
     eval "$1 $out"
   else
@@ -501,7 +502,7 @@ update_wns () {
 # Functions: Clean up worker nodes
 clean_wns () {
   # Delete instances not in condor_status, which were removed by condor_off
-  local in_status=("$(condor_status -autoformat Name|cut -d"." -f1)")
+  local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
   while read -r line;do
     instance=($line)
     name=${instance[0]}
@@ -754,9 +755,9 @@ Please check $instance_name status"
           fi
           sleep 1
         done
+      else
+        wn_starting=(${wn_starting[@]} $instance_name)
       fi
-    else
-      wn_starting=(${wn_starting[@]} $instance_name)
     fi
   done
   sleep $interval
