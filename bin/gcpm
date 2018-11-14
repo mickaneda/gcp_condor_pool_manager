@@ -432,6 +432,8 @@ read_config () {
 
 # Functions: Update worker node information
 update_wns () {
+  debug "update_wns ()"
+
   # update condor configuration for worker nodes
   local names=()
   local ips=()
@@ -501,6 +503,7 @@ update_wns () {
 
 # Functions: Clean up worker nodes
 clean_wns () {
+  debug "clean_wns ()"
   # Delete instances not in condor_status, which were removed by condor_off
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
   while read -r line;do
@@ -612,6 +615,8 @@ fi
 
 # Main loop
 while :;do
+  debug "loop top"
+
   # Update WN
   update_wns
 
@@ -682,6 +687,7 @@ while :;do
     fi
   done
 
+  is_create=0
   for((i=0;i<${#core[@]};i++));do
     n_idle_jobs=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
@@ -726,6 +732,7 @@ while :;do
             gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
           fi
           cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option" $level $bg_cmd
+          is_create=1
           break
         fi
         instance_name=""
@@ -760,5 +767,7 @@ Please check $instance_name status"
       fi
     fi
   done
-  sleep $interval
+  if [ $is_create -eq 0 ];then
+    sleep $interval
+  fi
 done
