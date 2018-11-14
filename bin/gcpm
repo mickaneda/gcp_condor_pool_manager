@@ -44,6 +44,7 @@ network_tag=""
 reuse=0
 interval=10
 head_info=gcp
+port=9618
 bucket=""
 admin=""
 owner=""
@@ -53,8 +54,8 @@ log_level_n=1
 gcloud="/root/google-cloud-sdk/bin/gcloud"
 gcloud_cmd="$gcloud"
 
-PARAMS=(core mem disk idle max max_cores static prefix image preemptible off_timer zones network_tag reuse interval head_info bucket admin owner bg_cmd log_level gcloud)
-PARAMS_NO_EMPTY=(core mem max_cores prefix image head_info bucket admin owner bg_cmd log_level gcloud)
+PARAMS=(core mem disk idle max max_cores static prefix image preemptible off_timer zones network_tag reuse interval head_info port bucket admin owner bg_cmd log_level gcloud)
+PARAMS_NO_EMPTY=(core mem max_cores prefix image head_info port bucket admin owner bg_cmd log_level gcloud)
 
 # Config file
 config_dir="${HOME}/.config/gcp_condor_pool_manager"
@@ -275,6 +276,7 @@ echo "{\"core\":${core[$i]},\"mem\":${mem[$i]},\"disk\":${disk[$i]},\"image\":\"
 sed -i"" 's/FIXME_ADMIN/${admin}/' /etc/condor/config.d/00_config_local.config
 
 sed -i"" 's/FIXME_HOST/${head}/' /etc/condor/config.d/10_security.config
+sed -i"" 's/FIXME_PORT/${port}/' /etc/condor/config.d/10_security.config
 sed -i"" 's/FIXME_DOMAIN/${domain}/' /etc/condor/config.d/10_security.config
 sed -i"" "s/FIXME_PRIVATE_DOMAIN/\$(hostname -d)/" /etc/condor/config.d/10_security.config
 
@@ -337,6 +339,7 @@ read_config () {
         reuse)       check_var reuse       "$var" 1 1;;
         interval)    check_var interval    "$var" 1 1;;
         head_info)   check_var head_info   "$var" 0 1;;
+        port)        check_var port        "$var" 1 1;;
         bucket)      check_var bucket      "$var" 0 1;;
         admin)       check_var admin       "$var" 0 1;;
         owner)       check_var owner       "$var" 0 1;;
