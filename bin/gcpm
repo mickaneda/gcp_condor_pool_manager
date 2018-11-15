@@ -69,6 +69,7 @@ edit=0
 system=0
 logger_line=0
 wn_starting=()
+wn_deleting=()
 
 # HELP
 HELP="HTCondor pool manager for Google Cloud Platform
@@ -485,7 +486,7 @@ update_wns () {
   touch "$wn_list"
   local wn
   for wn in "${in_status[@]}";do
-    if ! echo " ${names[*]} "|grep -q " $wn ";then
+    if [[ " ${names[*]} " != *\ $wn\ * ]];then
       local ip=$(grep "$wn" "$wn_list"|cut -d" " -f2)
       if [[ -n "$ip" ]];then
         names=("${names[@]}" "${wn}")
@@ -522,27 +523,39 @@ update_wns () {
 clean_wns () {
   debug "clean_wns ()"
   debug wn_starting=${wn_starting[@]}
+  debug wn_deleting=${wn_deleting[@]}
   # Delete instances not in condor_status, which were removed by condor_off
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
   wn_starting_tmp=("${wn_starting[@]}")
   wn_starting=()
   for wn in ${wn_starting_tmp[@]};do
-    if ! echo " ${in_status[*]} "|grep -q "$wn";then
+    if [[ " ${in_status[*]} " != *\ $wn\ * ]];then
       wn_starting=("${wn_starting[@]}" "$wn")
     fi
   done
-  local exist=("${in_status[@]}" "${wn_starting[@]}")
+  local exist=("${in_status[@]}" "${wn_starting[@]}" "${wn_deleting[@]}")
+  local instances=()
   while read -r line;do
     instance=($line)
+    name=${instance[0]}
+    instances=(${instances[@]} $name)
     local state=${instance[((${#instance[@]}-1))]}
     if [[ "$state" != "RUNNING" ]];then
       continue
     fi
-    name=${instance[0]}
-    if ! echo " ${exist[*]} "|grep -q "$name ";then
+    if [[ " ${exist[*]} " != *\ $name\ * ]];then
+      wn_deleting=$(${wn_deleting[@]} ${name})
       cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
+
+  wn_deleting_tmp=("${wn_deleting[@]}")
+  wn_deleting=()
+  for wn in ${wn_deleting_tmp[@]};do
+    if [[ " ${instances[*]} " != *\ $wn\ * ]];then
+      wn_starting=("${wn_starting[@]}" "$wn")
+    fi
+  done
 }
 
 #### Start script ###
@@ -681,6 +694,7 @@ while :;do
         add=1
         terminated=("${terminated[@]}" "${name}")
       else
+        wn_deleting=$(${wn_deleting[@]} ${name})
         cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
       fi
     else
@@ -700,7 +714,7 @@ while :;do
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
   for wn in ${wn_startingp[@]};do
-    if ! echo "${all[*]}"|grep -q "$wn";then
+    if [[ " ${all[*]} " != *\ $wn\ * ]];then
       all=("${all[@]}" "$wn")
       if [[ $max_cores -ne 0 ]];then
         for p in "${prefix_core[@]}";do
@@ -763,6 +777,7 @@ while :;do
           fi
           cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option" INFO $bg_cmd
           is_create=1
+          wn_deleting=($(echo " ${wn_deleting[*]} "|sed 's/ $instance_name / /g'))
           break
         fi
         instance_name=""
