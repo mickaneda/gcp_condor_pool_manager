@@ -24,8 +24,8 @@ SOFTWARE.'
 
 GCPM_AUTHOR="Michiru Kaneda"
 GCPM_MAIL="Michiru.Kaneda@cern.ch"
-GCPM_VERSION="v0.0.4"
-GCPM_DATE="8/Nov/2018"
+GCPM_VERSION="v0.0.6"
+GCPM_DATE="15/Nov/2018"
 
 # Default parameters
 core=()
