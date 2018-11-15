@@ -201,13 +201,31 @@ cmd_exec () {
       local is_bg=$3
     fi
   fi
-  logger "$level" "$ $1"
-  local out=""
-  check_log_level "$level" || out=">/dev/null"
-  if [ $is_bg -eq 0 ];then
-    eval "$1 $out"
+  if check_log_level "$level";then
+    logger "$level" "$ $1"
+    if [ $is_bg -eq 0 ];then
+      eval "$1"
+    else
+      eval "$1" &
+    fi
   else
-    eval "$1 $out" &
+    if [ $is_bg -eq 0 ];then
+      local out=$(eval "$1" 2>&1)
+      local ret=$?
+      if [ $ret -ne 0 ];then
+        err "$ $1"
+        echo "$out"
+      fi
+    else
+      (
+      out=$(eval "$1" 2>&1)
+      ret=$?
+      if [ $ret -new 0 ];then
+        err "$ $1"
+        echo "$out"
+      fi
+      ) &
+    fi
   fi
 }
 
@@ -503,6 +521,7 @@ update_wns () {
 # Functions: Clean up worker nodes
 clean_wns () {
   debug "clean_wns ()"
+  debug wn_starting=${wn_starting[@]}
   # Delete instances not in condor_status, which were removed by condor_off
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
   wn_starting_tmp=("${wn_starting[@]}")
