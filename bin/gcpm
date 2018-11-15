@@ -544,7 +544,7 @@ clean_wns () {
       continue
     fi
     if [[ " ${exist[*]} " != *\ $name\ * ]];then
-      wn_deleting=$(${wn_deleting[@]} ${name})
+      wn_deleting=(${wn_deleting[@]} ${name})
       cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
@@ -694,7 +694,7 @@ while :;do
         add=1
         terminated=("${terminated[@]}" "${name}")
       else
-        wn_deleting=$(${wn_deleting[@]} ${name})
+        wn_deleting=(${wn_deleting[@]} ${name})
         cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
       fi
     else
