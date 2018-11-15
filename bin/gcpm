@@ -204,7 +204,6 @@ cmd_exec () {
   logger "$level" "$ $1"
   local out=""
   check_log_level "$level" || out=">/dev/null"
-  eval "echo \$ $1 $out"
   if [ $is_bg -eq 0 ];then
     eval "$1 $out"
   else
@@ -498,7 +497,7 @@ update_wns () {
   fi
   # This command needs quotes and can not be passed to cmd_exec correctly.
   eval "condor_config_val -collector -set 'WNS = $wns' $out"
-  cmd_exec "condor_reconfig -collector" DEBUG 
+  cmd_exec "condor_reconfig -collector" DEBUG
 }
 
 # Functions: Clean up worker nodes
@@ -516,9 +515,13 @@ clean_wns () {
   local exist=("${in_status[@]}" "${wn_starting[@]}")
   while read -r line;do
     instance=($line)
+    local state=${instance[((${#instance[@]}-1))]}
+    if [[ "$state" != "RUNNING" ]];then
+      continue
+    fi
     name=${instance[0]}
     if ! echo " ${exist[*]} "|grep -q "$name ";then
-      cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" $level $bg_cmd
+      cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 }
@@ -659,7 +662,7 @@ while :;do
         add=1
         terminated=("${terminated[@]}" "${name}")
       else
-        cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" $level $bg_cmd
+        cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
       fi
     else
       add=1
@@ -698,7 +701,7 @@ while :;do
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
     n_machines=$(printf "$machines"|grep -c '')
     n_unclaimed=$(($(printf "$machines"|grep -c " Unclaimed")-n_idle_jobs-${idle[$i]}))
-    
+
     n_machines=$((n_machines+${#wn_starting[@]}))
     n_unclaimed=$((n_unclaimed+${#wn_starting[@]}))
 
@@ -739,7 +742,7 @@ while :;do
           if [[ -n "${disk[$i]}" ]];then
             gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
           fi
-          cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option" $level $bg_cmd
+          cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option" INFO $bg_cmd
           is_create=1
           break
         fi
