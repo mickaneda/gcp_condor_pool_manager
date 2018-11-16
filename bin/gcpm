@@ -751,8 +751,14 @@ while :;do
     n_machines=$(printf "$machines"|grep -c '')
     n_unclaimed=$(($(printf "$machines"|grep -c " Unclaimed")-n_idle_jobs-${idle[$i]}))
 
-    n_machines=$((n_machines+${#wn_starting[@]}))
-    n_unclaimed=$((n_unclaimed+${#wn_starting[@]}))
+    wn_starting_core=()
+    for wn in ${wn_starting[@]};do
+      if [[ "${wn}" = ${prefix_core[$i]}* ]];then
+        wn_starting_core=(${wn_starting_core[@]} $wn)
+      fi
+    done
+    n_machines=$((n_machines+${#wn_starting_core[@]}))
+    n_unclaimed=$((n_unclaimed+${#wn_starting_core[@]}))
 
     max_core_check=1
     if [[ $max_cores -ne 0 ]] && [[ $((total_cores+${core[$i]})) -gt $max_cores ]];then
