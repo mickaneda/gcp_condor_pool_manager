@@ -538,6 +538,7 @@ clean_wns () {
   local exist=("${in_status[@]}" "${wn_starting[@]}" "${wn_deleting[@]}")
   local instances=()
   debug exist=" ${exist[*]} "
+  local wn_deleting_new=()
   while read -r line;do
     instance=($line)
     name=${instance[0]}
@@ -547,7 +548,7 @@ clean_wns () {
       continue
     fi
     if [[ " ${exist[*]} " != *\ $name\ * ]];then
-      wn_deleting=(${wn_deleting[@]} ${name})
+      wn_deleting_new=(${wn_deleting_new[@]} ${name})
       cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
@@ -559,6 +560,7 @@ clean_wns () {
       wn_deleting=("${wn_deleting[@]}" "$wn")
     fi
   done
+  wn_deleting=("${wn_deleting[@]}" "${wn_deleting_new[@]}")
 }
 
 # Cleanup waiting list, to avoid persistent remaining
