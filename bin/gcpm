@@ -553,16 +553,20 @@ clean_wns () {
   wn_deleting=()
   for wn in ${wn_deleting_tmp[@]};do
     if [[ " ${instances[*]} " != *\ $wn\ * ]];then
-      wn_starting=("${wn_starting[@]}" "$wn")
+      wn_deleting=("${wn_deleting[@]}" "$wn")
     fi
   done
 }
 
 # Cleanup waiting list, to avoid persistent remaining
 clean_waiting_wn_list () {
-  wn_starting=()
-  wn_deleting=()
-  sleep 10
+  debug "clean_waiting_wn_list ()"
+  if [ ${#wn_starting[@]} -ne 0 ] || [ ${#wn_deleting[@]} -ne 0 ];then
+    warn "cleaup wn_starting: ${wn_starting[*]}, wn_deleting: ${wn_deleting[*]}"
+    wn_starting=()
+    wn_deleting=()
+    sleep 10
+  fi
 }
 
 #### Start script ###
