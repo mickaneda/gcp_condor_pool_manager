@@ -689,7 +689,7 @@ while :;do
     name=${instance[0]}
     state=${instance[((${#instance[@]}-1))]}
     add=0
-    if [[ "$state" = "TERMINATED" ]];then
+    if [[ "$state" = "TERMINATED" ]] && [[ " ${wn_deleting[*]} " != *\ $name\ * ]];then
       if [[ $reuse -eq 1 ]];then
         add=1
         terminated=("${terminated[@]}" "${name}")
