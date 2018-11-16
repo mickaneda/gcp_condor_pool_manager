@@ -776,14 +776,14 @@ while :;do
       if [[ $instance == ${prefix_core[$i]}* ]];then
         instance_name=$instance
         cmd_exec "$gcloud_cmd compute start $instance_name"
-        echo ""
+        break
       fi
     done
     if [[ -z "$instance_name" ]];then
       n=1
       while [[ $n -lt 10000 ]];do
         instance_name=${prefix_core[$i]}-$(printf "%04d" $n)
-        if ! echo "${all[*]}"|grep -q "$instance_name";then
+        if [[ " ${all[*]} " != *\ $instance_name\ * ]];then
           startup="${startup_prefix}-${core[$i]}core.sh"
           if [[ ! -f "$startup" ]];then
             make_startup
