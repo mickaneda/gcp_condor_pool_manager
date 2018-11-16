@@ -558,9 +558,17 @@ clean_wns () {
   done
 }
 
+# Cleanup waiting list, to avoid persistent remaining
+clean_waiting_wn_list () {
+  wn_starting=()
+  wn_deleting=()
+  sleep 10
+}
+
 #### Start script ###
 
 # Check arguments
+check_count=0
 while getopts esvhf:l:p: OPT;do
   case $OPT in
     "f" ) config_file=$OPTARG;;
@@ -713,7 +721,7 @@ while :;do
       fi
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
-  for wn in ${wn_startingp[@]};do
+  for wn in ${wn_starting[@]};do
     if [[ " ${all[*]} " != *\ $wn\ * ]];then
       all=("${all[@]}" "$wn")
       if [[ $max_cores -ne 0 ]];then
@@ -814,5 +822,8 @@ Please check $instance_name status"
   done
   if [ $is_create -eq 0 ];then
     sleep $interval
+  fi
+  if [ $check_count -eq 100 ];then
+    clean_waiting_wn_list
   fi
 done
