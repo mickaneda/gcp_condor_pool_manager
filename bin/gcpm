@@ -523,7 +523,9 @@ update_wns () {
 clean_wns () {
   debug "clean_wns ()"
   debug wn_starting=${wn_starting[@]}
+  debug wn_starting0=${wn_starting[0]}
   debug wn_deleting=${wn_deleting[@]}
+  debug wn_deleting0=${wn_deleting[0]}
   # Delete instances not in condor_status, which were removed by condor_off
   local in_status=($(condor_status -autoformat Name|cut -d"." -f1))
   wn_starting_tmp=("${wn_starting[@]}")
@@ -535,6 +537,7 @@ clean_wns () {
   done
   local exist=("${in_status[@]}" "${wn_starting[@]}" "${wn_deleting[@]}")
   local instances=()
+  debug exist=" ${exist[*]} "
   while read -r line;do
     instance=($line)
     name=${instance[0]}
@@ -742,6 +745,7 @@ while :;do
 
   is_create=0
   for((i=0;i<${#core[@]};i++));do
+    debug "checking ${core[$i]}..."
     n_idle_jobs=$(condor_q -allusers -global -af JobStatus RequestCpus|grep -c "^1 ${core[$i]}$")
     machines="$(condor_status -autoformat Name State|grep "${prefix_core[$i]}")"
     n_machines=$(printf "$machines"|grep -c '')
@@ -754,6 +758,7 @@ while :;do
     if [[ $max_cores -ne 0 ]] && [[ $((total_cores+${core[$i]})) -gt $max_cores ]];then
       max_core_check=0
     fi
+    debug "status: n_idle_jobs=$n_idle_jobs, n_unclaimed=$n_unclaimed, n_machines=$n_machines, max_core_check=$max_core_check"
     if [[ $n_unclaimed -ge 0 || $max_core_check -eq 0 || $n_machines -ge ${max[$i]} ]];then
       continue
     fi
