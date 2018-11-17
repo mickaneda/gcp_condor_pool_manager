@@ -841,7 +841,9 @@ Please check $instance_name status"
   if [ $is_create -eq 0 ];then
     sleep $interval
   fi
+  ((check_count++))
   if [ $check_count -eq 100 ];then
     clean_waiting_wn_list
+    check_count=0
   fi
 done
