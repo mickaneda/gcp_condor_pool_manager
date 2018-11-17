@@ -561,6 +561,11 @@ clean_wns () {
     fi
   done
   wn_deleting=("${wn_deleting[@]}" "${wn_deleting_new[@]}")
+  debug wn_starting=${wn_starting[@]}
+  debug wn_starting0=${wn_starting[0]}
+  debug wn_deleting=${wn_deleting[@]}
+  debug wn_deleting0=${wn_deleting[0]}
+  debug "clean_wns () end"
 }
 
 # Cleanup waiting list, to avoid persistent remaining
@@ -701,12 +706,13 @@ while :;do
       fi
     done
     [[ $core_check -eq 0 ]] && continue
+    [[ " ${wn_starting[*]} ${wn_deleting[*]} " = *\ $name\ * ]] && continue
 
     instance=($line)
     name=${instance[0]}
     state=${instance[((${#instance[@]}-1))]}
     add=0
-    if [[ "$state" = "TERMINATED" ]] && [[ " ${wn_deleting[*]} " != *\ $name\ * ]];then
+    if [[ "$state" = "TERMINATED" ]];then
       if [[ $reuse -eq 1 ]];then
         add=1
         terminated=("${terminated[@]}" "${name}")
@@ -732,17 +738,27 @@ while :;do
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
   for wn in ${wn_starting[@]};do
-    if [[ " ${all[*]} " != *\ $wn\ * ]];then
-      all=("${all[@]}" "$wn")
-      if [[ $max_cores -ne 0 ]];then
-        for p in "${prefix_core[@]}";do
-          if [[ "$wn" == ${p}* ]];then
-            n_core=${p#${prefix}-}
-            n_core=${n_core%core}
-            total_cores=$((total_cores+n_core))
-          fi
-        done
-      fi
+    all=("${all[@]}" "$wn")
+    if [[ $max_cores -ne 0 ]];then
+      for p in "${prefix_core[@]}";do
+        if [[ "$wn" == ${p}* ]];then
+          n_core=${p#${prefix}-}
+          n_core=${n_core%core}
+          total_cores=$((total_cores+n_core))
+        fi
+      done
+    fi
+  done
+  for wn in ${wn_deleting[@]};do
+    all=("${all[@]}" "$wn")
+    if [[ $max_cores -ne 0 ]];then
+      for p in "${prefix_core[@]}";do
+        if [[ "$wn" == ${p}* ]];then
+          n_core=${p#${prefix}-}
+          n_core=${n_core%core}
+          total_cores=$((total_cores+n_core))
+        fi
+      done
     fi
   done
 
@@ -803,7 +819,6 @@ while :;do
           fi
           cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" $gcloud_option" INFO $bg_cmd
           is_create=1
-          wn_deleting=($(echo " ${wn_deleting[*]} "|sed 's/ $instance_name / /g'))
           break
         fi
         instance_name=""
