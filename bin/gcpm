@@ -827,7 +827,7 @@ while :;do
           if [[ -n "${disk[$i]}" ]];then
             gcloud_option="$gcloud_option --boot-disk-size ${disk[$i]}GB"
           fi
-          cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\" --metadata-from-file shutdown-script=\"${shutdown}\" $gcloud_option" INFO $bg_cmd
+          cmd_exec "$gcloud_cmd compute instances create $instance_name --metadata-from-file startup-script=\"${startup}\",shutdown-script=\"${shutdown}\" $gcloud_option" INFO $bg_cmd
           is_create=1
           break
         fi
