@@ -376,11 +376,6 @@ read_config () {
     done < "$config_file"
   fi
 
-  # No reuse for non zero off timer nodes
-  if [[ $off_timer -ne 0 ]];then
-    reuse=0
-  fi
-
   # check variables
   for v in "${PARAMS_NO_EMPTY[@]}";do
     if [[ -z "$(eval "echo \$$v")" ]];then
