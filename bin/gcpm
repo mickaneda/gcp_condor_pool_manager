@@ -543,14 +543,21 @@ clean_wns () {
   while read -r line;do
     instance=($line)
     name=${instance[0]}
-    instances=(${instances[@]} $name)
     local state=${instance[((${#instance[@]}-1))]}
+    if [[ "$state" = "TERMINATED" ]];then
+      continue
+    fi
+    instances=(${instances[@]} $name)
     if [[ "$state" != "RUNNING" ]];then
       continue
     fi
     if [[ " ${exist[*]} " != *\ $name\ * ]];then
       wn_deleting_new=(${wn_deleting_new[@]} ${name})
-      cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
+      if [ "$reuse" -eq 1 ];then
+        cmd_exec "echo y|$gcloud_cmd compute instances stop ${name} $zone" INFO $bg_cmd
+      else
+        cmd_exec "echo y|$gcloud_cmd compute instances delete ${name} $zone" INFO $bg_cmd
+      fi
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
 
@@ -739,7 +746,7 @@ while :;do
       fi
     fi
   done < <(eval $gcloud_cmd compute instances list $filter|grep "^$prefix")
-  for wn in ${wn_starting[@]};do
+  for wn in "${wn_starting[@]}";do
     all=("${all[@]}" "$wn")
     if [[ $max_cores -ne 0 ]];then
       for p in "${prefix_core[@]}";do
@@ -751,7 +758,7 @@ while :;do
       done
     fi
   done
-  for wn in ${wn_deleting[@]};do
+  for wn in "${wn_deleting[@]}";do
     all=("${all[@]}" "$wn")
     if [[ $max_cores -ne 0 ]];then
       for p in "${prefix_core[@]}";do
@@ -773,7 +780,7 @@ while :;do
     n_unclaimed=$(($(printf "$machines"|grep -c " Unclaimed")-n_idle_jobs-${idle[$i]}))
 
     wn_starting_core=()
-    for wn in ${wn_starting[@]};do
+    for wn in "${wn_starting[@]}";do
       if [[ "${wn}" = ${prefix_core[$i]}* ]];then
         wn_starting_core=(${wn_starting_core[@]} $wn)
       fi
