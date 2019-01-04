@@ -1,5 +1,7 @@
 # gcp_condor_pool_manager (gcpm)
 
+:warning: This project was moved to [gcpm](https://github.com/mickaneda/gcpm).
+
 HTCondor pool manager for Google Cloud Platform.
 
 ## Installation
