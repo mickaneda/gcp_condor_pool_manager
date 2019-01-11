@@ -715,10 +715,12 @@ while :;do
       fi
     done
     [[ $core_check -eq 0 ]] && continue
-    [[ " ${wn_starting[*]} ${wn_deleting[*]} " = *\ $name\ * ]] && continue
 
     instance=($line)
     name=${instance[0]}
+
+    [[ " ${wn_starting[*]} ${wn_deleting[*]} " = *\ $name\ * ]] && continue
+
     state=${instance[((${#instance[@]}-1))]}
     add=0
     if [[ "$state" = "TERMINATED" ]];then
