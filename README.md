@@ -1,6 +1,6 @@
 # gcp_condor_pool_manager (gcpm)
 
-:warning: **This project was moved to [gcpm](https://github.com/mickaneda/gcpm)**.
+:warning: **This project was moved to [gcpm](https://github.com/rcmdnk/gcpm)**.
 
 HTCondor pool manager for Google Cloud Platform.
 
@@ -19,7 +19,7 @@ gcpm can be run as daemon service of Systemd.
 
 To install it, do:
 
-    $ curl -fsSL https://raw.github.com/mikaneda/gcp_condor_pool_manager/install/install.sh| sh
+    $ curl -fsSL https://raw.github.com/rcmdnk/gcp_condor_pool_manager/install/install.sh| sh
 
 Or get gcp_condor_pool_manager repository and run:
 
@@ -92,13 +92,13 @@ Then you can login the instance and modify settings.
 An image can be easily made by using
 [gcp-tools](https://github.com/mickaneda/gcp-tools):
 
-    $ git clone https://github.com/mickaneda/gcp-tools
+    $ git clone https://github.com/rcmdnk/gcp-tools
     $ export PATH=$PATH:./gcp-tools/bin
     $ gce make_image gcp-wn-template-01 gcp-wn-image-01
 
 ## Make Manager
 
-A manager host also can be setup by [gcpm-puppet](https://github.com/mickaneda/gcpm-puppet).
+A manager host also can be setup by [gcpm-puppet](https://github.com/rcmdnk/gcpm-puppet).
 
 You can easily make a manager by:
 
